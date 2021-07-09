@@ -102,6 +102,7 @@
 #define MACHO_SYMCMD_SIZE       24
 #define MACHO_NLIST_SIZE        12
 #define MACHO_RELINFO_SIZE      8
+#define MACHO_BUILDVERSION_SIZE 24
 
 /* 64 bit sizes */
 #define MACHO_HEADER64_SIZE     32
@@ -145,7 +146,10 @@
 #define LC_SEGMENT              0x1     /* segment load command */
 #define LC_SYMTAB               0x2     /* symbol table load command */
 #define LC_SEGMENT_64           0x19    /* segment load command */
+#define LC_BUILD_VERSION        0x32    /* build version command */
 
+/* Values for platform field in build version command */
+#define PLATFORM_MACOS          1
 
 #define VM_PROT_NONE            0x00
 #define VM_PROT_READ            0x01
@@ -287,6 +291,9 @@ typedef struct yasm_objfmt_macho {
     int bits;                   /* 32 / 64 */
 
     yasm_symrec *gotpcrel_sym;  /* ..gotpcrel */
+
+    unsigned long minos;        /* minimum os version */
+    unsigned long sdk;          /* sdk version */
 } yasm_objfmt_macho;
 
 
@@ -369,6 +376,8 @@ macho_objfmt_create_common(yasm_object *object, yasm_objfmt_module *module,
     }
 
     objfmt_macho->parse_scnum = 0;      /* section numbering starts at 0 */
+    objfmt_macho->minos = 0x000a0700;   /* min OS version: 10.7 */
+    objfmt_macho->sdk = 0x000a0700;     /* SDK version: 10.7 */
     return (yasm_objfmt *)objfmt_macho;
 }
 
@@ -1062,7 +1071,7 @@ macho_objfmt_output(yasm_object *object, FILE *f, int all_syms,
         headsize =
             MACHO_HEADER64_SIZE + MACHO_SEGCMD64_SIZE +
             (MACHO_SECTCMD64_SIZE * (objfmt_macho->parse_scnum)) +
-            MACHO_SYMCMD_SIZE;
+            MACHO_SYMCMD_SIZE + MACHO_BUILDVERSION_SIZE;
         macho_segcmd = LC_SEGMENT_64;
         macho_segcmdsize = MACHO_SEGCMD64_SIZE;
         macho_sectcmdsize = MACHO_SECTCMD64_SIZE;
@@ -1072,7 +1081,7 @@ macho_objfmt_output(yasm_object *object, FILE *f, int all_syms,
         headsize =
             MACHO_HEADER_SIZE + MACHO_SEGCMD_SIZE +
             (MACHO_SECTCMD_SIZE * (objfmt_macho->parse_scnum)) +
-            MACHO_SYMCMD_SIZE;
+            MACHO_SYMCMD_SIZE + MACHO_BUILDVERSION_SIZE;
         macho_segcmd = LC_SEGMENT;
         macho_segcmdsize = MACHO_SEGCMD_SIZE;
         macho_sectcmdsize = MACHO_SECTCMD_SIZE;
@@ -1132,8 +1141,8 @@ macho_objfmt_output(yasm_object *object, FILE *f, int all_syms,
     YASM_WRITE_32_L(localbuf, MH_OBJECT);       /* MACH file type */
 
     /* calculate number of commands and their size, put to stream */
-    head_ncmds = 0;
-    head_sizeofcmds = 0;
+    head_ncmds = 1;
+    head_sizeofcmds = MACHO_BUILDVERSION_SIZE;
     if (objfmt_macho->parse_scnum > 0) {
         head_ncmds++;
         head_sizeofcmds +=
@@ -1154,6 +1163,14 @@ macho_objfmt_output(yasm_object *object, FILE *f, int all_syms,
         /* initial offset to first section */
         fileoffset = MACHO_HEADER_SIZE + head_sizeofcmds;
     }
+
+    /* --------------- write build version command ---------------- */
+    YASM_WRITE_32_L(localbuf, LC_BUILD_VERSION);
+    YASM_WRITE_32_L(localbuf, MACHO_BUILDVERSION_SIZE);
+    YASM_WRITE_32_L(localbuf, PLATFORM_MACOS);
+    YASM_WRITE_32_L(localbuf, objfmt_macho->minos);
+    YASM_WRITE_32_L(localbuf, objfmt_macho->sdk);
+    YASM_WRITE_32_L(localbuf, 0); /* number of tools */
 
     /* --------------- write segment header command ---------------- */
     YASM_WRITE_32_L(localbuf, macho_segcmd);    /* command LC_SEGMENT */
@@ -1300,7 +1317,7 @@ macho_objfmt_add_default_section(yasm_object *object)
         yasm_dvs_initialize(&dvs);
         yasm_dvs_append(&dvs, yasm_dv_create_expr(
             yasm_expr_create_ident(
-                yasm_expr_int(yasm_intnum_create_uint(0)), line)));
+                yasm_expr_int(yasm_intnum_create_uint(0)), 0)));
         yasm_section_bcs_append(retval,
             yasm_bc_create_data(&dvs, 1, 0, object->arch, 0));
     }
@@ -1574,11 +1591,64 @@ macho_symrec_data_print(void *data, FILE *f, int indent_level)
         fprintf(f, "nil\n");
 }
 
+static void
+parse_version(unsigned long *out, const yasm_valparam *vp)
+{
+    unsigned long major, minor, subminor;
+    int m;
+
+    if (vp->type != YASM_PARAM_STRING) {
+        yasm_error_set(YASM_ERROR_VALUE,
+                       N_("argument to `%s' is not a string"), vp->val);
+        return;
+    }
+
+    m = sscanf(vp->param.str, "%lu.%lu.%lu", &major, &minor, &subminor);
+    if (m < 2) {
+        yasm_error_set(YASM_ERROR_VALUE,
+                       N_("argument to `%s' must be `MAJOR.MINOR[.SUBMINOR]`"),
+                       vp->val);
+        return;
+    }
+
+    *out = ((major & 0xffff) << 16) | ((minor & 0xff) << 8) | (subminor & 0xff);
+}
+
+static void
+dir_buildversion(yasm_object *object, yasm_valparamhead *valparams,
+                 yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_objfmt_macho *objfmt_macho = (yasm_objfmt_macho *)object->objfmt;
+    yasm_valparam *vp;
+
+    /* Accept, but do nothing with empty ident */
+    if (!valparams)
+        return;
+
+    vp = yasm_vps_first(valparams);
+    while (vp) {
+        if (vp->val && yasm__strcasecmp(vp->val, "minos") == 0) {
+            parse_version(&objfmt_macho->minos, vp);
+        } else if (vp->val && yasm__strcasecmp(vp->val, "sdk") == 0) {
+            parse_version(&objfmt_macho->sdk, vp);
+        } else {
+            yasm_dir_helper_valparam_warn(object, vp, line, NULL);
+        }
+        vp = yasm_vps_next(vp);
+    }
+}
+
 
 /* Define valid debug formats to use with this object format */
 static const char *macho_objfmt_dbgfmt_keywords[] = {
     "null",
     NULL
+};
+
+static const yasm_directive macho_objfmt_directives[] = {
+    { ".buildversion", "gas",  dir_buildversion, YASM_DIR_ANY },
+    { "buildversion",  "nasm", dir_buildversion, YASM_DIR_ANY },
+    { NULL, NULL, NULL, 0 }
 };
 
 /* Define objfmt structure -- see objfmt.h for details */
@@ -1590,7 +1660,7 @@ yasm_objfmt_module yasm_macho_LTX_objfmt = {
     0,
     macho_objfmt_dbgfmt_keywords,
     "null",
-    NULL,   /* no directives */
+    macho_objfmt_directives,
     NULL,   /* no standard macros */
     macho_objfmt_create,
     macho_objfmt_output,
@@ -1609,7 +1679,7 @@ yasm_objfmt_module yasm_macho32_LTX_objfmt = {
     0,
     macho_objfmt_dbgfmt_keywords,
     "null",
-    NULL,   /* no directives */
+    macho_objfmt_directives,
     NULL,   /* no standard macros */
     macho32_objfmt_create,
     macho_objfmt_output,
@@ -1628,7 +1698,7 @@ yasm_objfmt_module yasm_macho64_LTX_objfmt = {
     0,
     macho_objfmt_dbgfmt_keywords,
     "null",
-    NULL,   /* no directives */
+    macho_objfmt_directives,
     NULL,   /* no standard macros */
     macho64_objfmt_create,
     macho_objfmt_output,
