@@ -1,0 +1,41 @@
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build-host:
+    env:
+      MACOSX_DEPLOYMENT_TARGET: 10.14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact-name: macOS
+          - os: ubuntu-latest
+            artifact-name: Ubuntu
+
+    name: "Build - ${{ matrix.artifact-name }}"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install autotools
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            brew update
+            brew install automake autoconf
+          fi
+      - name: Autotools
+        run: ./autogen.sh
+      - name: Build
+        run: make
+      - name: Check
+        run: make check
+      - name: Dist
+        run: make dist
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: yasm-*.tar.gz
+
