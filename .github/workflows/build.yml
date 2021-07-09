@@ -19,6 +19,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
+      - name: Install autotools
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            brew update
+            brew install automake autoconf
+          fi
       - name: Autotools
         run: ./autogen.sh
       - name: Build
