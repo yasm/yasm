@@ -363,6 +363,8 @@ macho_objfmt_create_common(yasm_object *object, yasm_objfmt_module *module,
         (bits_pref == 0 || bits_pref == 32)) {
         objfmt_macho->bits = 32;
         objfmt_macho->gotpcrel_sym = NULL;
+        objfmt_macho->minos = 0x000a0400;   /* min OS version: 10.4 */
+        objfmt_macho->sdk = 0x000a0400;     /* SDK version: 10.4 */
     } else if (yasm__strcasecmp(yasm_arch_get_machine(object->arch),
                               "amd64") == 0 &&
              (bits_pref == 0 || bits_pref == 64)) {
@@ -370,14 +372,14 @@ macho_objfmt_create_common(yasm_object *object, yasm_objfmt_module *module,
         /* FIXME: misuse of NULL bytecode */
         objfmt_macho->gotpcrel_sym =
             yasm_symtab_define_label(object->symtab, "..gotpcrel", NULL, 0, 0);
+        objfmt_macho->minos = 0x000a0500;   /* min OS version: 10.5 */
+        objfmt_macho->sdk = 0x000a0500;     /* SDK version: 10.5 */
     } else {
         yasm_xfree(objfmt_macho);
         return NULL;
     }
 
     objfmt_macho->parse_scnum = 0;      /* section numbering starts at 0 */
-    objfmt_macho->minos = 0x000a0700;   /* min OS version: 10.7 */
-    objfmt_macho->sdk = 0x000a0700;     /* SDK version: 10.7 */
     return (yasm_objfmt *)objfmt_macho;
 }
 
