@@ -461,8 +461,8 @@ Go_genSwitch(Go *g, FILE *o, State *from, State *next, int *readCh){
 	    if(g->span[i].to != def)
 		*(t++) = &g->span[i];
 
-	    if (dFlag)
-		fputs("\tYYDEBUG(-1, yych);\n", o);
+	if (dFlag)
+	    fputs("\tYYDEBUG(-1, yych);\n", o);
 
 #if 0
 	if (*readCh) {
