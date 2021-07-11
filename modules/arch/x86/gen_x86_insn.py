@@ -37,7 +37,7 @@ ordered_cpus = [
 ordered_cpu_features = [
     "FPU", "Cyrix", "AMD", "MMX", "3DNow", "SMM", "SSE", "SSE2",
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
-    "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
+    "AES", "AVX", "FMA", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
     "FSGSBASE", "RDRAND", "XSAVEOPT", "EPTVPID", "SMX", "AVX2", "BMI1",
     "BMI2", "INVPCID", "LZCNT", "TBM", "TSX", "SHA", "SMAP", "RDSEED", "ADX",
     "PRFCHW"]
