@@ -109,7 +109,7 @@ num_check(Val *val)
         strcat(result_msg, ": ");
         strcat(result_msg, (char *)ascii);
     }
-    free(result);
+    yasm_xfree(result);
     
     return ret;
 }

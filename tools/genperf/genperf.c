@@ -242,8 +242,8 @@ perfect_gen(FILE *out, const char *lookup_function_name,
     fprintf(out, "}\n");
     fprintf(out, "\n");
 
-    free(tab);
-    free(tabh);
+    yasm_xfree(tab);
+    yasm_xfree(tabh);
 }
 
 int

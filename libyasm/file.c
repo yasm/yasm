@@ -473,7 +473,7 @@ yasm__createpath_common(const char *path, int win)
     size_t len, lth;
 
     lth = len = strlen(path);
-    ts = tp = (char *) malloc(len + 1);
+    ts = tp = (char *) yasm_xmalloc(len + 1);
     pe = pp + len;
     while (pe > pp) {
         if ((win && *pe == '\\') || *pe == '/')
@@ -523,7 +523,7 @@ yasm__createpath_common(const char *path, int win)
         }
         *tp++ = *pp++;
     }
-    free(ts);
+    yasm_xfree(ts);
     return lth;
 }
 

@@ -705,7 +705,7 @@ check_tasm_directive(char *line)
             "%%define %s %%1\n";
         char **data;
 
-        data = malloc(2*sizeof(char*));
+        data = nasm_malloc(2*sizeof(char*));
         oldline = line;
         line = nasm_malloc(strlen(irp_format) - 2 + len2 + 1);
         sprintf(line,irp_format,q);
@@ -804,7 +804,7 @@ check_tasm_directive(char *line)
         oldline = line;
         line = nasm_malloc(5 + 1 + len + 1);
         sprintf(line, "struc %s", p);
-        struc = malloc(sizeof(*struc));
+        struc = nasm_malloc(sizeof(*struc));
         struc->name = nasm_strdup(p);
         struc->fields = NULL;
         struc->lastField = NULL;
@@ -1079,7 +1079,7 @@ prepreproc(char *line)
         d = strchr(c+1, '\n');
         if (d)
             *d = '\0';
-        l = malloc(sizeof(*l));
+        l = nasm_malloc(sizeof(*l));
         l -> first = tokenise(c+1);
         l -> finishes = NULL;
         l -> next = *lp;

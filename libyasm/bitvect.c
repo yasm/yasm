@@ -457,7 +457,7 @@ void BitVector_Destroy_List(listptr list, N_int count)      /* free list     */
         {
             BitVector_Destroy(*slot++);
         }
-        free((voidptr) list);
+        yasm_xfree((voidptr) list);
     }
 }
 
@@ -496,7 +496,7 @@ listptr BitVector_Create_List(N_int bits, boolean clear, N_int count)
 
     if (count > 0)
     {
-        list = (listptr) malloc(sizeof(wordptr) * count);
+        list = (listptr) yasm_xmalloc(sizeof(wordptr) * count);
         if (list != NULL)
         {
             slot = list;
