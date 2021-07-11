@@ -111,11 +111,11 @@ void
 yasm_errwarn_initialize(void)
 {
     /* Default enabled warnings.  See errwarn.h for a list. */
-    warn_class_enabled = 
+    warn_class_enabled =
         (1UL<<YASM_WARN_GENERAL) | (1UL<<YASM_WARN_UNREC_CHAR) |
         (1UL<<YASM_WARN_PREPROC) | (0UL<<YASM_WARN_ORPHAN_LABEL) |
         (1UL<<YASM_WARN_UNINIT_CONTENTS) | (0UL<<YASM_WARN_SIZE_OVERRIDE) |
-        (1UL<<YASM_WARN_IMPLICIT_SIZE_OVERRIDE);
+        (1UL<<YASM_WARN_IMPLICIT_SIZE_OVERRIDE) | (0UL<<YASM_WARN_SEGREG_IN_64BIT);
 
     yasm_eclass = YASM_ERROR_NONE;
     yasm_estr = NULL;
@@ -217,7 +217,7 @@ errwarn_data_new(yasm_errwarns *errwarns, unsigned long line,
     }
 
     if (replace_parser_error && ins_we && ins_we->type == WE_PARSERERROR) {
-        /* overwrite last error */      
+        /* overwrite last error */
         we = ins_we;
     } else {
         /* add a new error */
