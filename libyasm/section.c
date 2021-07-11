@@ -123,6 +123,23 @@ dir_global(yasm_object *object, yasm_valparamhead *valparams,
 }
 
 static void
+dir_privextern(yasm_object *object, yasm_valparamhead *valparams,
+               yasm_valparamhead *objext_valparams, unsigned long line)
+{
+    yasm_valparamhead vps;
+
+    yasm_vps_initialize(&vps);
+    if (!objext_valparams) {
+        yasm_valparam *vp;
+
+        vp = yasm_vp_create_id(NULL, strdup("private_extern"), '$');
+        yasm_vps_append(&vps, vp);
+        objext_valparams = &vps;
+    }
+    dir_global(object, valparams, objext_valparams, line);
+}
+
+static void
 dir_common(yasm_object *object, yasm_valparamhead *valparams,
            yasm_valparamhead *objext_valparams, unsigned long line)
 {
@@ -164,6 +181,7 @@ static const yasm_directive object_directives[] = {
     { ".extern",        "gas",  dir_extern,     YASM_DIR_ID_REQUIRED },
     { ".global",        "gas",  dir_global,     YASM_DIR_ID_REQUIRED },
     { ".globl",         "gas",  dir_global,     YASM_DIR_ID_REQUIRED },
+    { ".private_extern","gas",  dir_privextern, YASM_DIR_ID_REQUIRED },
     { "extern",         "nasm", dir_extern,     YASM_DIR_ID_REQUIRED },
     { "global",         "nasm", dir_global,     YASM_DIR_ID_REQUIRED },
     { "common",         "nasm", dir_common,     YASM_DIR_ID_REQUIRED },
