@@ -36,6 +36,7 @@ typedef union {
     uintptr_t arch_data;
     struct {
         char *contents;
+        yasm_utfenc enc;
         size_t len;
     } str;
 } nasm_yystype;

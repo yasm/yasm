@@ -551,10 +551,11 @@ yasm_dataval *yasm_dv_create_expr(/*@keep@*/ yasm_expr *expn);
 /** Create a new data value from a string.
  * \param contents      string (may contain NULs)
  * \param len           length of string
+ * \param enc           utf encoding of string
  * \return Newly allocated data value.
  */
 YASM_LIB_DECL
-yasm_dataval *yasm_dv_create_string(/*@keep@*/ char *contents, size_t len);
+yasm_dataval *yasm_dv_create_string(/*@keep@*/ char *contents, size_t len, yasm_utfenc enc);
 
 /** Create a new data value from raw bytes data.
  * \param contents      raw data (may contain NULs)
@@ -570,11 +571,6 @@ yasm_dataval *yasm_dv_create_raw(/*@keep@*/ unsigned char *contents,
  */
 YASM_LIB_DECL
 yasm_dataval *yasm_dv_create_reserve(void);
-
-#ifndef YASM_DOXYGEN
-#define yasm_dv_create_string(s, l) yasm_dv_create_raw((unsigned char *)(s), \
-                                                       (unsigned long)(l))
-#endif
 
 /** Get the underlying value of a data value.
  * \param dv    data value
