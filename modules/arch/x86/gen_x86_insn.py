@@ -8096,7 +8096,7 @@ add_group("intel_SHA256RNDS2",
 	cpu=["SHA"],
 	opcode=[0x0F, 0x38, 0xCB],
 	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
-		Operand(type="SIMDReg", size=128, dest="EA")])
+		Operand(type="SIMDRM", size=128, dest="EA")])
 
 add_insn("SHA1MSG1", "intel_SHA1MSG1")
 add_insn("SHA1MSG2", "intel_SHA1MSG2")
