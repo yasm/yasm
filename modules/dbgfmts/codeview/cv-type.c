@@ -561,6 +561,7 @@ cv_leaf_destroy(cv_leaf *leaf)
         }
         ch++;
     }
+    yasm_xfree(leaf);
 }
 
 static unsigned long
