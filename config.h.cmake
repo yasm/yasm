@@ -8,6 +8,9 @@
 /* Define if messsage translations are enabled */
 #cmakedefine ENABLE_NLS 1
 
+/* Define if you have the `abort' function. */
+#cmakedefine HAVE_ABORT 1
+
 /* */
 #undef HAVE_GETTEXT
 
@@ -22,6 +25,9 @@
 
 /* Define to 1 if you have the `getcwd' function. */
 #cmakedefine HAVE_GETCWD 1
+
+/* Define to 1 if you have the `_stricmp' function. */
+#cmakedefine HAVE__STRICMP 1
 
 /* Define to 1 if you have the `toascii' function. */
 #cmakedefine HAVE_TOASCII 1
@@ -45,4 +51,3 @@
 
 /* Command name to run C preprocessor */
 #define CPP_PROG "@CPP_PROG@"
-
