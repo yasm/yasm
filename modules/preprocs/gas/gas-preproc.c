@@ -973,10 +973,11 @@ static int eval_rept(yasm_preproc_gas *pp, int unused, const char *arg1)
     SLIST_INIT(&lines);
 
     while (line) {
-        skip_whitespace2(&line);
-        if (starts_with(line, ".rept")) {
+        char *line2 = line;
+        skip_whitespace2(&line2);
+        if (starts_with(line2, ".rept")) {
             nesting++;
-        } else if (starts_with(line, ".endr") && --nesting == 0) {
+        } else if (starts_with(line2, ".endr") && --nesting == 0) {
             for (i = 0; i < n; i++) {
                 buffered_line *current_line;
                 prev_bline = NULL;
