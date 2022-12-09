@@ -26,7 +26,7 @@ typedef unsigned long uintptr_t;
 #endif
 
 #ifndef YASM_LIB_DECL
-# if defined(BUILD_SHARED_LIBS) && defined(_MSC_VER)
+# if defined(BUILD_SHARED_LIBS) && defined(_WIN32)
 #  ifdef YASM_LIB_SOURCE
 #   define YASM_LIB_DECL __declspec(dllexport)
 #  else
