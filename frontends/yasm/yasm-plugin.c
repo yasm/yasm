@@ -31,7 +31,7 @@
 #include "libyasm-stdint.h"
 #include "yasm-plugin.h"
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #include <windows.h>
 #elif defined(__GNUC__)
 #include <dlfcn.h>
@@ -43,7 +43,7 @@ static int num_loaded_plugins = 0;
 static void *
 load_dll(const char *name)
 {
-#if defined(_MSC_VER)
+#if defined(_WIN32)
     return LoadLibrary(name);
 #elif defined(__GNUC__)
     return dlopen(name, RTLD_NOW);
@@ -62,7 +62,7 @@ load_plugin(const char *name)
     /* Load library */
 
     path = yasm_xmalloc(strlen(name)+10);
-#if defined(_MSC_VER)
+#if defined(_WIN32)
     strcpy(path, name);
     strcat(path, ".dll");
     lib = load_dll(path);
@@ -92,7 +92,7 @@ load_plugin(const char *name)
 
     /* Get yasm_init_plugin() function and run it */
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
     init_plugin =
         (void (*)(void))GetProcAddress((HINSTANCE)lib, "yasm_init_plugin");
 #elif defined(__GNUC__)
@@ -115,7 +115,7 @@ unload_plugins(void)
         return;
 
     for (i = 0; i < num_loaded_plugins; i++) {
-#if defined(_MSC_VER)
+#if defined(_WIN32)
         FreeLibrary((HINSTANCE)loaded_plugins[i]);
 #elif defined(__GNUC__)
         dlclose(loaded_plugins[i]);

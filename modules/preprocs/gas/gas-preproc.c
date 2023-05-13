@@ -912,6 +912,9 @@ static void expand_macro(yasm_preproc_gas *pp, macro_entry *macro, const char *a
                         char *end = strstr(macro->params[j], "=");
                         int len = (end ? (size_t)(end - macro->params[j])
                                        : strlen(macro->params[j]));
+                        if (!tokval.t_charptr) {
+                            continue;
+                        }
                         if (!strncmp(tokval.t_charptr, macro->params[j], len)
                             && tokval.t_charptr[len] == '\0') {
                             /* now, find matching argument. */
@@ -932,6 +935,9 @@ static void expand_macro(yasm_preproc_gas *pp, macro_entry *macro, const char *a
                             memcpy(line + cursor - len, value, value_length);
                             pp->expr.string = work = line;
                             pp->expr.string_cursor += delta;
+                            if (pp->expr.symbol == tokval.t_charptr) {
+                                tokval.t_charptr = NULL;
+                            }
                             if (pp->expr.symbol) {
                                 yasm_xfree(pp->expr.symbol);
                                 pp->expr.symbol = NULL;
@@ -973,10 +979,11 @@ static int eval_rept(yasm_preproc_gas *pp, int unused, const char *arg1)
     SLIST_INIT(&lines);
 
     while (line) {
-        skip_whitespace2(&line);
-        if (starts_with(line, ".rept")) {
+        char *line2 = line;
+        skip_whitespace2(&line2);
+        if (starts_with(line2, ".rept")) {
             nesting++;
-        } else if (starts_with(line, ".endr") && --nesting == 0) {
+        } else if (starts_with(line2, ".endr") && --nesting == 0) {
             for (i = 0; i < n; i++) {
                 buffered_line *current_line;
                 prev_bline = NULL;

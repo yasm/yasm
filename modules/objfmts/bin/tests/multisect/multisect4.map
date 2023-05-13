@@ -28,7 +28,6 @@ start:     00000800
 align:     00000004
 follows:   not defined
 vstart:    00000800
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 
@@ -40,7 +39,6 @@ start:     00009000
 align:     00000004
 follows:   not defined
 vstart:    00009000
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 
@@ -52,7 +50,6 @@ start:     00009100
 align:     00000010
 follows:   .text
 vstart:    00009100
-vseg:      not defined
 valign:    00000010
 vfollows:  not defined
 
@@ -64,7 +61,6 @@ start:     00009200
 align:     00000010
 follows:   .data
 vstart:    00000900
-vseg:      not defined
 valign:    00000010
 vfollows:  .earlybss
 
@@ -76,7 +72,6 @@ start:     00009300
 align:     00000010
 follows:   .bcopy32
 vstart:    00009300
-vseg:      not defined
 valign:    00000010
 vfollows:  not defined
 
@@ -88,7 +83,6 @@ start:     00009400
 align:     00000100
 follows:   not defined
 vstart:    00000A00
-vseg:      not defined
 valign:    00000100
 vfollows:  .bcopy32
 

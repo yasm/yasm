@@ -111,11 +111,11 @@ void
 yasm_errwarn_initialize(void)
 {
     /* Default enabled warnings.  See errwarn.h for a list. */
-    warn_class_enabled = 
+    warn_class_enabled =
         (1UL<<YASM_WARN_GENERAL) | (1UL<<YASM_WARN_UNREC_CHAR) |
         (1UL<<YASM_WARN_PREPROC) | (0UL<<YASM_WARN_ORPHAN_LABEL) |
         (1UL<<YASM_WARN_UNINIT_CONTENTS) | (0UL<<YASM_WARN_SIZE_OVERRIDE) |
-        (1UL<<YASM_WARN_IMPLICIT_SIZE_OVERRIDE);
+        (1UL<<YASM_WARN_IMPLICIT_SIZE_OVERRIDE) | (0UL<<YASM_WARN_SEGREG_IN_64BIT);
 
     yasm_eclass = YASM_ERROR_NONE;
     yasm_estr = NULL;
@@ -217,7 +217,7 @@ errwarn_data_new(yasm_errwarns *errwarns, unsigned long line,
     }
 
     if (replace_parser_error && ins_we && ins_we->type == WE_PARSERERROR) {
-        /* overwrite last error */      
+        /* overwrite last error */
         we = ins_we;
     } else {
         /* add a new error */
@@ -492,14 +492,6 @@ yasm_errwarns_output_all(yasm_errwarns *errwarns, yasm_linemap *lm,
     const char *filename, *xref_filename;
     unsigned long line, xref_line;
 
-    /* If we're treating warnings as errors, tell the user about it. */
-    if (warning_as_error && warning_as_error != 2) {
-        print_error("", 0,
-                    yasm_gettext_hook(N_("warnings being treated as errors")),
-                    NULL, 0, NULL);
-        warning_as_error = 2;
-    }
-
     /* Output error/warnings. */
     SLIST_FOREACH(we, &errwarns->errwarns, link) {
         /* Output error/warning */
@@ -514,7 +506,17 @@ yasm_errwarns_output_all(yasm_errwarns *errwarns, yasm_linemap *lm,
             print_error(filename, line, we->msg, xref_filename, xref_line,
                         we->xrefmsg);
         else
+        {
             print_warning(filename, line, we->msg);
+
+            /* If we're treating warnings as errors, tell the user about it. */
+            if (warning_as_error && warning_as_error != 2) {
+                const char *msg =
+                    yasm_gettext_hook(N_("warnings being treated as errors"));
+                print_error(filename, line, msg, NULL, 0, NULL);
+                warning_as_error = 2;
+            }
+        }
     }
 }
 

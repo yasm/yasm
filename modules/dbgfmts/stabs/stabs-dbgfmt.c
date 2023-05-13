@@ -355,7 +355,7 @@ stabs_dbgfmt_generate(yasm_object *object, yasm_linemap *linemap,
             yasm_error_set(YASM_ERROR_GENERAL,
                 N_("stabs debugging conflicts with user-defined section .stabstr"));
             yasm_errwarn_propagate(errwarns,
-                                   yasm_section_bcs_first(info.stab)->line);
+                                   yasm_section_bcs_first(info.stabstr)->line);
         } else {
             yasm_warn_set(YASM_WARN_GENERAL,
                 N_("stabs debugging overrides empty section .stabstr"));

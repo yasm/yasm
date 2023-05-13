@@ -32,7 +32,6 @@ start:     00000800
 align:     00000004
 follows:   not defined
 vstart:    00000800
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 
@@ -44,7 +43,6 @@ start:     00006C00
 align:     00000010
 follows:   not defined
 vstart:    00006C00
-vseg:      not defined
 valign:    00000010
 vfollows:  not defined
 
@@ -56,7 +54,6 @@ start:     00007C00
 align:     00000004
 follows:   not defined
 vstart:    00007C00
-vseg:      not defined
 valign:    00000004
 vfollows:  not defined
 
@@ -68,7 +65,6 @@ start:     0000A010
 align:     00000010
 follows:   not defined
 vstart:    0000A010
-vseg:      not defined
 valign:    00000010
 vfollows:  not defined
 
@@ -80,7 +76,6 @@ start:     0000A5A0
 align:     00000004
 follows:   .data
 vstart:    000048D0
-vseg:      not defined
 valign:    00000010
 vfollows:  .earlybss
 
@@ -92,7 +87,6 @@ start:     0000A840
 align:     00000004
 follows:   .bcopy32
 vstart:    00004B70
-vseg:      not defined
 valign:    00000010
 vfollows:  .bcopy32
 
@@ -104,7 +98,6 @@ start:     0000A863
 align:     00000001
 follows:   .config
 vstart:    0000A863
-vseg:      not defined
 valign:    00000001
 vfollows:  not defined
 
@@ -116,7 +109,6 @@ start:     0000A870
 align:     00000010
 follows:   .adv
 vstart:    0000A870
-vseg:      not defined
 valign:    00000010
 vfollows:  not defined
 
@@ -128,7 +120,6 @@ start:     0000E170
 align:     00000004
 follows:   not defined
 vstart:    00004B94
-vseg:      not defined
 valign:    00000004
 vfollows:  .config
 
@@ -140,7 +131,6 @@ start:     0000E170
 align:     00000004
 follows:   not defined
 vstart:    00004BA0
-vseg:      not defined
 valign:    00000010
 vfollows:  .config.end
 

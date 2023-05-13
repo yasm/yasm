@@ -174,6 +174,8 @@ nasm_preproc_destroy(yasm_preproc *preproc)
         yasm_xfree(preproc_nasm->line);
     if (preproc_nasm->file_name)
         yasm_xfree(preproc_nasm->file_name);
+    if (preproc_nasm->in)
+        fclose(preproc_nasm->in);
     yasm_xfree(preproc);
     while (!STAILQ_EMPTY(preproc_deps)) {
         preproc_dep *dep = STAILQ_FIRST(preproc_deps);
@@ -181,7 +183,7 @@ nasm_preproc_destroy(yasm_preproc *preproc)
         yasm_xfree(dep->name);
         yasm_xfree(dep);
     }
-    yasm_xfree(preproc_deps);
+    yasm_xfree(nasm_src_set_fname(NULL));
 }
 
 static char *

@@ -705,7 +705,7 @@ check_tasm_directive(char *line)
             "%%define %s %%1\n";
         char **data;
 
-        data = malloc(2*sizeof(char*));
+        data = nasm_malloc(2*sizeof(char*));
         oldline = line;
         line = nasm_malloc(strlen(irp_format) - 2 + len2 + 1);
         sprintf(line,irp_format,q);
@@ -804,7 +804,7 @@ check_tasm_directive(char *line)
         oldline = line;
         line = nasm_malloc(5 + 1 + len + 1);
         sprintf(line, "struc %s", p);
-        struc = malloc(sizeof(*struc));
+        struc = nasm_malloc(sizeof(*struc));
         struc->name = nasm_strdup(p);
         struc->fields = NULL;
         struc->lastField = NULL;
@@ -1079,7 +1079,7 @@ prepreproc(char *line)
         d = strchr(c+1, '\n');
         if (d)
             *d = '\0';
-        l = malloc(sizeof(*l));
+        l = nasm_malloc(sizeof(*l));
         l -> first = tokenise(c+1);
         l -> finishes = NULL;
         l -> next = *lp;
@@ -2313,6 +2313,9 @@ expand_macros_in_string(char **p)
     Token *line = tokenise(*p);
     line = expand_smacro(line);
     *p = detoken(line, FALSE);
+    do
+        line = delete_Token(line);
+    while (line);
 }
 
 /**
@@ -2732,6 +2735,7 @@ do_directive(Token * tline)
             inc->next = istk;
             inc->conds = NULL;
             inc->fp = inc_fopen(p, &newname);
+            nasm_free(p);
             inc->fname = nasm_src_set_fname(newname);
             inc->lineno = nasm_src_set_linnum(0);
             inc->lineinc = 1;
@@ -5051,6 +5055,7 @@ pp_getline(void)
                 }
                 istk = i->next;
                 list->downlevel(LIST_INCLUDE);
+                nasm_free(i->fname);
                 nasm_free(i);
                 if (!istk)
                     return NULL;

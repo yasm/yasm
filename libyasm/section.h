@@ -45,15 +45,6 @@ struct yasm_reloc {
     /*@dependent@*/ yasm_symrec *sym;       /**< Relocated symbol */
 };
 
-/** Structure of functions that can be overridden
- */
-typedef struct yasm_overrides {
-    /** TODO: documentation
-     */
-    int
-    (*value_finalize)(yasm_value *value, yasm_bytecode *precbc);
-} yasm_overrides;
-
 /** An object.  This is the internal representation of an object file. */
 struct yasm_object {
     /*@owned@*/ char *src_filename;     /**< Source filename */
@@ -63,7 +54,6 @@ struct yasm_object {
     /*@owned@*/ yasm_arch *arch;        /**< Target architecture */
     /*@owned@*/ yasm_objfmt *objfmt;    /**< Object format */
     /*@owned@*/ yasm_dbgfmt *dbgfmt;    /**< Debug format */
-    /*@owned@*/ yasm_overrides *overrides; /**< Function overrides */
 
     /** Currently active section.  Used by some directives.  NULL if no
      * section active.

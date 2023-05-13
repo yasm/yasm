@@ -177,7 +177,7 @@ new_check_flt(Init_Entry *val)
     for (i=1;i<MANT_BYTES;i++)      /* don't compare first byte */
         if (mantissa[i] != val->mantissa[i])
             result = 1;
-    free(mantissa);
+    yasm_xfree(mantissa);
     if (result) {
         strcat(result_msg, "mantissa");
         return 1;
@@ -231,7 +231,7 @@ test_new_normalized_edgecase(void)
 static void
 get_family_setup(void)
 {
-    flt = malloc(sizeof(yasm_floatnum));
+    flt = yasm_xmalloc(sizeof(yasm_floatnum));
     flt->mantissa = BitVector_Create(MANT_BITS, TRUE);
 }
 
@@ -239,7 +239,7 @@ static void
 get_family_teardown(void)
 {
     BitVector_Destroy(flt->mantissa);
-    free(flt);
+    yasm_xfree(flt);
 }
 
 static void

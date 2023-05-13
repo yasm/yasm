@@ -75,7 +75,8 @@ typedef enum {
     EM_SPARCV9 = 43,                            /* SPARC v9 64-bit */
     EM_IA_64 = 50,                              /* Intel IA-64 */
     EM_X86_64 = 62,                             /* AMD x86-64 */
-    EM_ALPHA = 0x9026                           /* Alpha (no ABI) */
+    EM_ALPHA = 0x9026,                           /* Alpha (no ABI) */
+    EM_LOONGARCH = 258                           /* loongson LoongArch */
 } elf_machine;
 
 typedef enum {
