@@ -1,23 +1,36 @@
-dnl a macro to check for the installed Cython version; note PYTHON needs to
-dnl be set before this function is called.
-dnl  CYTHON_CHECK_VERSION([MIN-VERSION], [ACTION-IF-TRUE], [ACTION-IF-FALSE])
+dnl a macro to check for the installed Cython version
+dnl  CYTHON_CHECK_VERSION([VERSION [,[ACTION-IF-TRUE [,ACTION-IF-FALSE]]])
+dnl Check if a Cython version is installed
+dnl Defines CYTHON_VERSION and CYTHON_FOUND
+dnl taken from Enligntenment Foundation Libraries(GPL).
 AC_DEFUN([CYTHON_CHECK_VERSION],
- [prog="import re, sys
-from Cython.Compiler.Version import version
-def get_int(arg):
-    matched = re.match(r'\d+', arg)
-    if matched is None:
-        return 0
-    else:
-        return int(matched.group(0))
-# split strings by '.' and convert to numeric.  Append some zeros
-# because we need at least 4 digits for the hex conversion.
-ver = map(get_int, version.rstrip('abcdefghijklmnopqrstuvwxyz').split('.')) + [[0, 0, 0]]
-verhex = 0
-for i in range(0, 4): verhex = (verhex << 8) + ver[[i]]
-minver = map(get_int, '$1'.split('.')) + [[0, 0, 0]]
-minverhex = 0
-for i in range(0, 4): minverhex = (minverhex << 8) + minver[[i]]
-sys.exit(verhex < minverhex)"
-  AS_IF([AM_RUN_LOG([$PYTHON -c "$prog"])], [$2], [$3])])
+[
+AC_REQUIRE([AM_PATH_PYTHON])
+ifelse([$1], [], [_msg=""], [_msg=" >= $1"])
+AC_MSG_CHECKING(for Cython$_msg)
+AC_CACHE_VAL(py_cv_cython, [
 
+prog="from __future__ import print_function; import Cython.Compiler.Version; print(Cython.Compiler.Version.version)"
+CYTHON_VERSION=`$PYTHON -c "$prog" 2>&AC_FD_CC`
+
+py_cv_cython=no
+if test "x$CYTHON_VERSION" != "x"; then
+   py_cv_cython=yes
+fi
+
+if test "x$py_cv_cython" = "xyes"; then
+   ifelse([$1], [], [:],
+      [AS_VERSION_COMPARE([$CYTHON_VERSION], [$1], [py_cv_cython=no])])
+fi
+])
+
+AC_MSG_RESULT([$py_cv_cython])
+
+if test "x$py_cv_cython" = "xyes"; then
+   CYTHON_FOUND=yes
+   ifelse([$2], [], [:], [$2])
+else
+   CYTHON_FOUND=no
+   ifelse([$3], [], [AC_MSG_ERROR([Could not find usable Cython$_msg])], [$3])
+fi
+])
