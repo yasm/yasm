@@ -635,7 +635,7 @@ static void hash_ab(
     else
     {
       /* try with 2*smax */
-      free((void *)tabh);
+      yasm_xfree((void *)tabh);
       *smax = *smax * 2;
       scrambleinit(scramble, *smax);
       tabh = (hstuff *)yasm_xmalloc(sizeof(hstuff)*(form->perfect == MINIMAL_HP ?
@@ -671,8 +671,8 @@ static void hash_ab(
     sprintf(final->line[0], "  unsigned long rsl = (a ^ scramble[tab[b]]);\n");
   }
 
-  free((void *)tabq);
-  free((void *)tabh);
+  yasm_xfree((void *)tabq);
+  yasm_xfree((void *)tabh);
 }
 
 
@@ -883,8 +883,8 @@ void findhash(
         else if (*blen < *smax)
         {
           *blen *= 2;
-          free(tabq);
-          free(*tabb);
+          yasm_xfree(tabq);
+          yasm_xfree(*tabb);
           *tabb  = (bstuff *)yasm_xmalloc((size_t)(sizeof(bstuff)*(*blen)));
           tabq  = (qstuff *)yasm_xmalloc((size_t)(sizeof(qstuff)*(*blen+1)));
         }
@@ -909,8 +909,8 @@ void findhash(
         if (*blen < *smax)
         {
           *blen *= 2;
-          free(*tabb);
-          free(tabq);
+          yasm_xfree(*tabb);
+          yasm_xfree(tabq);
           *tabb  = (bstuff *)yasm_xmalloc((size_t)(sizeof(bstuff)*(*blen)));
           tabq  = (qstuff *)yasm_xmalloc((size_t)(sizeof(qstuff)*(*blen+1)));
           --trysalt;               /* we know this salt got distinct (A,B) */
@@ -930,7 +930,7 @@ void findhash(
   }
 
   /* free working memory */
-  free((void *)tabq);
+  yasm_xfree((void *)tabq);
 }
 
 #if 0
@@ -1149,7 +1149,7 @@ hashform *form;                                           /* user directives */
   /* clean up memory sources */
   refree(textroot);
   refree(keyroot);
-  free((void *)tab);
+  yasm_xfree((void *)tab);
 }
 
 
