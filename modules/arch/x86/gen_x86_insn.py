@@ -5976,7 +5976,7 @@ add_insn("vblendvps", "avx_sse4xmm0", modifiers=[0x4A])
 
 # vpblendvb didn't have a 256-bit form until AVX2
 add_group("avx2_sse4xmm0",
-    cpu=["AVX2"],
+    cpu=["AVX"],
     modifiers=["Op2Add"],
     vex=128,
     prefix=0x66,
