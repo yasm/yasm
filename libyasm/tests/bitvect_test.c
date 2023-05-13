@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "util.h"
 #include "libyasm/bitvect.h"
 
 static int
