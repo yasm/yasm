@@ -1077,6 +1077,10 @@ elf_objfmt_section_switch(yasm_object *object, yasm_valparamhead *valparams,
         align = 0;
         data.type = SHT_PROGBITS;
         data.flags = 0;
+    } else if (strcmp(sectname, ".note.gnu.property") == 0) {
+        align = 8;
+        data.type = SHT_NOTE;
+        data.flags = 0;
     } else {
         /* Default to code */
         align = 1;
