@@ -3,7 +3,7 @@
 
 extern yasm_arch_module yasm_dbg_LTX_objfmt;
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 __declspec(dllexport)
 #endif
 void
