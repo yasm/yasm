@@ -1376,7 +1376,7 @@ opt_plugin_handler(/*@unused@*/ char *cmd, char *param,
 #endif
 
 static void
-apply_preproc_builtins()
+apply_preproc_builtins(void)
 {
     char *predef;
 
@@ -1409,7 +1409,7 @@ apply_preproc_standard_macros(const yasm_stdmac *stdmacs)
 }
 
 static void
-apply_preproc_saved_options()
+apply_preproc_saved_options(void)
 {
     constcharparam *cp, *cpnext;
 

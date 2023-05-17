@@ -62,8 +62,7 @@ Find the mapping that will produce a perfect hash
 */
 
 /* return the ceiling of the log (base 2) of val */
-ub4  phash_log2(val)
-ub4  val;
+ub4  phash_log2(ub4 val)
 {
   ub4 i;
   for (i=0; ((ub4)1<<i) < val; ++i)
