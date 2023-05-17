@@ -18,7 +18,7 @@ jobs:
     name: "Build - ${{ matrix.artifact-name }}"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install autotools
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
@@ -34,7 +34,7 @@ jobs:
       - name: Dist
         run: make dist
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.artifact-name }}
           path: yasm-*.tar.gz
