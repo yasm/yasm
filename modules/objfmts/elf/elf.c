@@ -222,7 +222,7 @@ elf_strtab_entry_set_str(elf_strtab_entry *entry, const char *str)
 }
 
 elf_strtab_head *
-elf_strtab_create()
+elf_strtab_create(void)
 {
     elf_strtab_head *strtab = yasm_xmalloc(sizeof(elf_strtab_head));
     elf_strtab_entry *entry = yasm_xmalloc(sizeof(elf_strtab_entry));
@@ -373,7 +373,7 @@ elf_ssym_symtab_entry_print(void *data, FILE *f, int indent_level)
 }
 
 elf_symtab_head *
-elf_symtab_create()
+elf_symtab_create(void)
 {
     elf_symtab_head *symtab = yasm_xmalloc(sizeof(elf_symtab_head));
     elf_symtab_entry *entry = yasm_xmalloc(sizeof(elf_symtab_entry));
