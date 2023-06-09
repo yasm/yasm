@@ -1680,6 +1680,10 @@ static void
 bin_section_data_destroy(void *data)
 {
     bin_section_data *bsd = (bin_section_data *)data;
+    if (bsd->align)
+        yasm_xfree(bsd->align);
+    if (bsd->valign)
+        yasm_xfree(bsd->valign);
     if (bsd->start)
         yasm_expr_destroy(bsd->start);
     if (bsd->vstart)
