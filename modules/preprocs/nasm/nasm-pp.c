@@ -285,7 +285,7 @@ static const char *directives[] = {
     "%local",
     "%macro", "%pop", "%push", "%rep", "%repl", "%rotate",
     "%scope", "%stacksize",
-    "%strlen", "%substr", "%undef", "%xdefine"
+    "%strlen", "%substr", "%undef", "%warning", "%xdefine"
 };
 enum
 {
@@ -302,7 +302,7 @@ enum
     PP_LOCAL,
     PP_MACRO, PP_POP, PP_PUSH, PP_REP, PP_REPL, PP_ROTATE,
     PP_SCOPE, PP_STACKSIZE,
-    PP_STRLEN, PP_SUBSTR, PP_UNDEF, PP_XDEFINE
+    PP_STRLEN, PP_SUBSTR, PP_UNDEF, PP_WARNING, PP_XDEFINE
 };
 
 /* If this is a an IF, ELIF, ELSE or ENDIF keyword */
@@ -2863,6 +2863,7 @@ do_directive(Token * tline)
             break;
 
         case PP_ERROR:
+        case PP_WARNING:
             tline->next = expand_smacro(tline->next);
             tline = tline->next;
             skip_white_(tline);
@@ -2871,7 +2872,7 @@ do_directive(Token * tline)
                 p = tline->text + 1;    /* point past the quote to the name */
                 p[strlen(p) - 1] = '\0';        /* remove the trailing quote */
                 expand_macros_in_string(&p);
-                error(ERR_NONFATAL, "%s", p);
+                error((i == PP_ERROR) ? ERR_NONFATAL : ERR_WARNING, "%s", p);
                 nasm_free(p);
             }
             else
