@@ -482,15 +482,15 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab,
 
         /* get size (if specified); expr overrides stored integer */
         if (entry->xsize) {
-            size_intn = yasm_intnum_copy(
-                yasm_expr_get_intnum(&entry->xsize, 1));
-            if (!size_intn) {
+            yasm_intnum *intn = yasm_expr_get_intnum(&entry->xsize, 1);
+            if (!intn) {
                 yasm_error_set(YASM_ERROR_VALUE,
                                N_("size specifier not an integer expression"));
                 yasm_errwarn_propagate(errwarns, entry->xsize->line);
-            }
+            } else
+                size_intn = yasm_intnum_copy(intn);
         }
-        else
+        if (!size_intn)
             size_intn = yasm_intnum_create_uint(entry->size);
 
         /* get EQU value for constants */
