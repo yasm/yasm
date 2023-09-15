@@ -1260,7 +1260,7 @@ yasm_expr_get_intnum(yasm_expr **ep, int calc_bc_dist)
 {
     *ep = yasm_expr_simplify(*ep, calc_bc_dist);
 
-    if ((*ep)->op == YASM_EXPR_IDENT && (*ep)->terms[0].type == YASM_EXPR_INT)
+    if (*ep && (*ep)->op == YASM_EXPR_IDENT && (*ep)->terms[0].type == YASM_EXPR_INT)
         return (*ep)->terms[0].data.intn;
     else
         return (yasm_intnum *)NULL;
