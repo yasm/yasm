@@ -412,6 +412,8 @@ yasm_intnum_copy(const yasm_intnum *intn)
 void
 yasm_intnum_destroy(yasm_intnum *intn)
 {
+    if (intn == NULL)
+        return;
     if (intn->type == INTNUM_BV)
         BitVector_Destroy(intn->val.bv);
     yasm_xfree(intn);
