@@ -79,7 +79,7 @@ handle_dot_label(YYSTYPE *lvalp, char *tok, size_t toklen, size_t zeropos,
         lvalp->str_val = yasm__xstrndup(tok+zeropos+(parser_nasm->tasm?2:0),
             toklen-zeropos-(parser_nasm->tasm?2:0));
         /* check for special non-local ..@label */
-        if (lvalp->str_val[zeropos+2] == '@')
+        if (lvalp->str_val[2] == '@')
             return NONLOCAL_ID;
         return SPECIAL_ID;
     }
