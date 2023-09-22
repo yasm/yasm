@@ -966,6 +966,7 @@ parse_operand(yasm_parser_nasm *parser_nasm)
             unsigned int size = SIZE_OVERRIDE_val;
             get_next_token();
             if (parser_nasm->masm && curtok == ID && !yasm__strcasecmp(ID_val, "ptr")) {
+                destroy_curtok();
                 get_next_token();
             }
             op = parse_operand(parser_nasm);
