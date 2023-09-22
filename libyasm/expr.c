@@ -687,6 +687,7 @@ expr_level_op(/*@returned@*/ /*@only@*/ yasm_expr *e, int fold_const,
                 level_numterms--;
                 /* make sure to delete folded intnum */
                 yasm_intnum_destroy(e->terms[i].data.intn);
+                e->terms[i].data.intn = NULL;
             } else if (o != i) {
                 /* copy term if it changed places */
                 e->terms[o++] = e->terms[i];
