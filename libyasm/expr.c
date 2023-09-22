@@ -994,7 +994,10 @@ yasm_expr__copy_except(const yasm_expr *e, int except)
 {
     yasm_expr *n;
     int i;
-    
+
+    if (e == NULL)
+        return NULL;
+
     n = yasm_xmalloc(sizeof(yasm_expr) +
                      sizeof(yasm_expr__item)*(e->numterms<2?0:e->numterms-2));
 
