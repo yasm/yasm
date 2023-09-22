@@ -767,6 +767,7 @@ parse_instr(yasm_parser_nasm *parser_nasm)
                     break;
                 if (!expect(',')) {
                     yasm_bc_destroy(bc);
+                    yasm_error_clear();
                     return NULL;
                 }
                 get_next_token();
