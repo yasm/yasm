@@ -629,6 +629,11 @@ yasm_bytecode *
 yasm_section_bcs_append(yasm_section *sect, yasm_bytecode *bc)
 {
     if (bc) {
+    if (!sect || !bc) {
+        yasm_error_set(YASM_ERROR_VALUE, "Attempt to append bytecode to a NULL section or with a NULL bytecode");
+        return NULL;
+    }
+
         if (bc->callback) {
             bc->section = sect;     /* record parent section */
             STAILQ_INSERT_TAIL(&sect->bcs, bc, link);
