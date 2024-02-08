@@ -666,8 +666,10 @@ dv_done:
                 if (is_eol())   /* allow trailing , on list */
                     break;
             }
-            return yasm_bc_create_data(&dvs, size, 0, p_object->arch,
+            yasm_bytecode * retbc = yasm_bc_create_data(&dvs, size, 0, p_object->arch,
                                        cur_line);
+            yasm_dvs_delete(&dvs);
+            return retbc;
         }
         case RESERVE_SPACE:
         {
