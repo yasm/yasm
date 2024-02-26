@@ -692,6 +692,14 @@ add_group("threebyte",
     operands=[])
 
 #
+# Four byte opcode instructions with no operands
+#
+add_group("fourbyte",
+    modifiers=["Op0Add", "Op1Add", "Op2Add", "Op3Add"],
+    opcode=[0x00, 0x00, 0x00, 0x00],
+    operands=[])
+
+#
 # One byte opcode instructions with general memory operand
 #
 add_group("onebytemem",
@@ -5474,6 +5482,9 @@ add_group("vmxthreebytemem",
     operands=[Operand(type="Mem", size=64, relaxed=True, dest="EA")])
 add_insn("vmclear", "vmxthreebytemem", modifiers=[0x66])
 add_insn("vmxon", "vmxthreebytemem", modifiers=[0xF3])
+
+add_insn("endbr32", "fourbyte", modifiers=[0xF3, 0x0F, 0x1E, 0xFB])
+add_insn("endbr64", "fourbyte", modifiers=[0xF3, 0x0F, 0x1E, 0xFA])
 
 #####################################################################
 # Intel SMX Instructions
