@@ -426,10 +426,11 @@ x86_common_print(const x86_common *common, FILE *f, int indent_level)
 static void
 x86_opcode_print(const x86_opcode *opcode, FILE *f, int indent_level)
 {
-    fprintf(f, "%*sOpcode: %02x %02x %02x OpLen=%u\n", indent_level, "",
+    fprintf(f, "%*sOpcode: %02x %02x %02x %02x OpLen=%u\n", indent_level, "",
             (unsigned int)opcode->opcode[0],
             (unsigned int)opcode->opcode[1],
             (unsigned int)opcode->opcode[2],
+            (unsigned int)opcode->opcode[3],
             (unsigned int)opcode->len);
 }
 
