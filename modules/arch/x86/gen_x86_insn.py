@@ -321,7 +321,7 @@ class GroupForm(object):
 
         cpus_str = "|".join("CPU_%s" % x for x in sorted(self.cpu))
 
-        if len(self.modifiers) > 3:
+        if len(self.modifiers) > 4:
             raise ValueError("too many modifiers: %s" % (self.modifiers,))
 
         cpus_str = []
@@ -337,9 +337,9 @@ class GroupForm(object):
 
 
         mods = ["MOD_%s" % x for x in self.modifiers]
-        # Ensure mods initializer string is 3 long
-        mods.extend(["0", "0", "0"])
-        mod_str = "{" + ', '.join(mods[0:3]) + "}"
+        # Ensure mods initializer string is 4 long
+        mods.extend(["0", "0", "0", "0"])
+        mod_str = "{" + ', '.join(mods[0:4]) + "}"
 
         gas_flags = []
         if self.gas_only:
@@ -479,12 +479,12 @@ class Insn(object):
         # Ensure cpus initializer string is 3 long
         cpus_str.extend(["0", "0", "0"])
 
-        if len(self.modifiers) > 3:
+        if len(self.modifiers) > 4:
             raise ValueError("too many modifiers")
         mods_str = ["0x%02X" % x for x in self.modifiers]
 
-        # Ensure modifiers is at least 3 long
-        mods_str.extend(["0", "0", "0"])
+        # Ensure modifiers is at least 4 long
+        mods_str.extend(["0", "0", "0", "0"])
 
         return ",\t".join(["%s_insn" % self.groupname,
                            "%d" % len(groups[self.groupname]),

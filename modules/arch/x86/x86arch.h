@@ -235,7 +235,7 @@ typedef struct x86_common {
 } x86_common;
 
 typedef struct x86_opcode {
-    unsigned char opcode[3];        /* opcode */
+    unsigned char opcode[4];        /* opcode */
     unsigned char len;
 } x86_opcode;
 
