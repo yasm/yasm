@@ -42,13 +42,14 @@ static const char *cpu_find_reverse(unsigned int cpu0, unsigned int cpu1,
 #define MOD_Op0Add  2   /* Parameter adds to opcode byte 0 */
 #define MOD_Op1Add  3   /* Parameter adds to opcode byte 1 */
 #define MOD_Op2Add  4   /* Parameter adds to opcode byte 2 */
-#define MOD_SpAdd   5   /* Parameter adds to "spare" value */
-#define MOD_OpSizeR 6   /* Parameter replaces opersize */
-#define MOD_Imm8    7   /* Parameter is included as immediate byte */
-#define MOD_AdSizeR 8   /* Parameter replaces addrsize (jmp only) */
-#define MOD_DOpS64R 9   /* Parameter replaces default 64-bit opersize */
-#define MOD_Op1AddSp 10 /* Parameter is added as "spare" to opcode byte 2 */
-#define MOD_SetVEX  11  /* Parameter replaces internal VEX prefix value */
+#define MOD_Op3Add  5   /* Parameter adds to opcode byte 3 */
+#define MOD_SpAdd   6   /* Parameter adds to "spare" value */
+#define MOD_OpSizeR 7   /* Parameter replaces opersize */
+#define MOD_Imm8    8   /* Parameter is included as immediate byte */
+#define MOD_AdSizeR 9   /* Parameter replaces addrsize (jmp only) */
+#define MOD_DOpS64R 10   /* Parameter replaces default 64-bit opersize */
+#define MOD_Op1AddSp 11 /* Parameter is added as "spare" to opcode byte 2 */
+#define MOD_SetVEX  12  /* Parameter replaces internal VEX prefix value */
 
 /* GAS suffix flags for instructions */
 enum x86_gas_suffix_flags {
@@ -251,9 +252,9 @@ typedef struct x86_insn_info {
      * its parameter in LSB->MSB order from the arch-specific data[1] from the
      * lexer data, and the LSB of the arch-specific data[1] is reserved for the
      * count of insn_info structures in the instruction grouping, there can
-     * only be a maximum of 3 modifiers.
+     * only be a maximum of 4 modifiers.
      */
-    unsigned char modifiers[3];
+    unsigned char modifiers[4];
 
     /* Operand Size */
     unsigned char opersize;
@@ -282,10 +283,10 @@ typedef struct x86_insn_info {
     /* The length of the basic opcode */
     unsigned char opcode_len;
 
-    /* The basic 1-3 byte opcode (not including the special instruction
+    /* The basic 1-4 byte opcode (not including the special instruction
      * prefix).
      */
-    unsigned char opcode[3];
+    unsigned char opcode[4];
 
     /* The 3-bit "spare" value (extended opcode) for the R/M byte field */
     unsigned char spare;
@@ -309,7 +310,7 @@ typedef struct x86_id_insn {
     wordptr cpu_enabled;
 
     /* Modifier data */
-    unsigned char mod_data[3];
+    unsigned char mod_data[4];
 
     /* Number of elements in the instruction parse group */
     unsigned int num_info:8;
@@ -476,6 +477,9 @@ x86_finalize_jmpfar(yasm_bytecode *bc, yasm_bytecode *prev_bc,
                 break;
             case MOD_Op2Add:
                 jmpfar->opcode.opcode[2] += mod_data[i];
+                break;
+            case MOD_Op3Add:
+                jmpfar->opcode.opcode[3] += mod_data[i];
                 break;
             case MOD_Op1AddSp:
                 jmpfar->opcode.opcode[1] += mod_data[i]<<3;
@@ -1196,6 +1200,9 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
                 break;
             case MOD_Op2Add:
                 insn->opcode.opcode[2] += mod_data[i];
+                break;
+            case MOD_Op3Add:
+                insn->opcode.opcode[3] += mod_data[i];
                 break;
             case MOD_SpAdd:
                 spare += mod_data[i];

@@ -321,7 +321,7 @@ class GroupForm(object):
 
         cpus_str = "|".join("CPU_%s" % x for x in sorted(self.cpu))
 
-        if len(self.modifiers) > 3:
+        if len(self.modifiers) > 4:
             raise ValueError("too many modifiers: %s" % (self.modifiers,))
 
         cpus_str = []
@@ -337,9 +337,9 @@ class GroupForm(object):
 
 
         mods = ["MOD_%s" % x for x in self.modifiers]
-        # Ensure mods initializer string is 3 long
-        mods.extend(["0", "0", "0"])
-        mod_str = "{" + ', '.join(mods[0:3]) + "}"
+        # Ensure mods initializer string is 4 long
+        mods.extend(["0", "0", "0", "0"])
+        mod_str = "{" + ', '.join(mods[0:4]) + "}"
 
         gas_flags = []
         if self.gas_only:
@@ -479,12 +479,12 @@ class Insn(object):
         # Ensure cpus initializer string is 3 long
         cpus_str.extend(["0", "0", "0"])
 
-        if len(self.modifiers) > 3:
+        if len(self.modifiers) > 4:
             raise ValueError("too many modifiers")
         mods_str = ["0x%02X" % x for x in self.modifiers]
 
-        # Ensure modifiers is at least 3 long
-        mods_str.extend(["0", "0", "0"])
+        # Ensure modifiers is at least 4 long
+        mods_str.extend(["0", "0", "0", "0"])
 
         return ",\t".join(["%s_insn" % self.groupname,
                            "%d" % len(groups[self.groupname]),
@@ -689,6 +689,14 @@ add_group("twobyte",
 add_group("threebyte",
     modifiers=["Op0Add", "Op1Add", "Op2Add"],
     opcode=[0x00, 0x00, 0x00],
+    operands=[])
+
+#
+# Four byte opcode instructions with no operands
+#
+add_group("fourbyte",
+    modifiers=["Op0Add", "Op1Add", "Op2Add", "Op3Add"],
+    opcode=[0x00, 0x00, 0x00, 0x00],
     operands=[])
 
 #
@@ -5474,6 +5482,9 @@ add_group("vmxthreebytemem",
     operands=[Operand(type="Mem", size=64, relaxed=True, dest="EA")])
 add_insn("vmclear", "vmxthreebytemem", modifiers=[0x66])
 add_insn("vmxon", "vmxthreebytemem", modifiers=[0xF3])
+
+add_insn("endbr32", "fourbyte", modifiers=[0xF3, 0x0F, 0x1E, 0xFB])
+add_insn("endbr64", "fourbyte", modifiers=[0xF3, 0x0F, 0x1E, 0xFA])
 
 #####################################################################
 # Intel SMX Instructions
