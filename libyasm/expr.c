@@ -577,7 +577,7 @@ expr_simplify_identity(yasm_expr *e, int numterms, int *int_term,
     if (numterms > 1 && *int_term != -1 &&
         expr_is_constant(e->op, e->terms[*int_term].data.intn)) {
         /* Loop through, deleting everything but the integer term */
-        for (i=0; i<e->numterms; i++)
+        for (i=0; i<numterms; i++)
             if (i != *int_term)
                 expr_delete_term(&e->terms[i], 1);
 
