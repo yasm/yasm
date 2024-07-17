@@ -3890,6 +3890,7 @@ expand_mmac_params(Token * tline)
                     n = atoi(t->text + 1)-1;
                     if (end < 0)
                         end += mac->nparam;
+                    if (n < 0 || n >= mac->nparam) continue;
 
                     for (k = n; k <= end; k++)
                     {
@@ -3900,6 +3901,7 @@ expand_mmac_params(Token * tline)
                             if (mac->nparam > 1)
                                 k = (k + mac->rotate) % mac->nparam;
                             tt = mac->params[k];
+                            if (k < 0 || k >= mac->nparam) continue;
                         }
                         if (tt)
                         {
