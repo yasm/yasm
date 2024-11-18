@@ -1274,7 +1274,7 @@ dir_ident(yasm_object *object, yasm_valparamhead *valparams,
             return;
         }
         yasm_dvs_append(&dvs,
-                        yasm_dv_create_string(yasm__xstrdup(s), strlen(s)));
+                        yasm_dv_create_string(yasm__xstrdup(s), strlen(s), UTF8));
     } while ((vp = yasm_vps_next(vp)));
 
     yasm_section_bcs_append(comment,

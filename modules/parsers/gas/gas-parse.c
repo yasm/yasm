@@ -1097,7 +1097,7 @@ parse_strvals(yasm_parser_gas *parser_gas, yasm_datavalhead *dvs)
             yasm_dvs_initialize(dvs);
             return 0;
         }
-        dv = yasm_dv_create_string(STRING_val.contents, STRING_val.len);
+        dv = yasm_dv_create_string(STRING_val.contents, STRING_val.len, UTF8);
         yasm_dvs_append(dvs, dv);
         get_next_token(); /* STRING */
         num++;
