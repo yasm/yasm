@@ -1,9 +1,8 @@
 add_executable(genversion preprocs/nasm/genversion.c)
-get_target_property(_tmp_GENVERSION_EXE genversion LOCATION)
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/version.mac
-    COMMAND ${_tmp_GENVERSION_EXE} ${CMAKE_CURRENT_BINARY_DIR}/version.mac
-    DEPENDS ${_tmp_GENVERSION_EXE}
+    COMMAND $<TARGET_FILE:genversion> ${CMAKE_CURRENT_BINARY_DIR}/version.mac
+    DEPENDS genversion
     )
 
 YASM_GENMACRO(
