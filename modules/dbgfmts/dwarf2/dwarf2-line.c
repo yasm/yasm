@@ -709,6 +709,7 @@ yasm_dwarf2__generate_line(yasm_object *object, yasm_linemap *linemap,
     info.dbgfmt_dwarf2 = dbgfmt_dwarf2;
     info.debug_line = yasm_object_get_general(object, ".debug_line", 1, 0, 0,
                                               &new, 0);
+    info.errwarns = errwarns;
 
     /* header */
     head = yasm_dwarf2__add_head(dbgfmt_dwarf2, info.debug_line, NULL, 0, 0);
