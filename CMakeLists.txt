@@ -1,5 +1,5 @@
 PROJECT(yasm)
-CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5...4.0)
 if (COMMAND cmake_policy)
     cmake_policy(SET CMP0003 NEW)
 endif (COMMAND cmake_policy)
