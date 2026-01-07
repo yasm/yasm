@@ -3099,6 +3099,7 @@ do_directive(Token * tline)
             {
                 error(ERR_NONFATAL, "`%s': not defining a macro",
                         tline->text);
+                free_tlist(origline);
                 return DIRECTIVE_FOUND;
             }
             k = hash(defining->name);
@@ -3196,6 +3197,7 @@ do_directive(Token * tline)
                 {
                     error(ERR_NONFATAL, "non-constant value given to `%%rep'");
                     yasm_expr_destroy(evalresult);
+                    free_tlist(origline);
                     return DIRECTIVE_FOUND;
                 }
                 i = (int)yasm_intnum_get_int(intn) + 1;
