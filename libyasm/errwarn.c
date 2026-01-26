@@ -37,10 +37,6 @@
 
 #define MSG_MAXSIZE     1024
 
-#if !defined(HAVE_TOASCII) || defined(lint)
-# define toascii(c) ((c) & 0x7F)
-#endif
-
 /* Default handlers for replacable functions */
 static /*@exits@*/ void def_internal_error_
     (const char *file, unsigned int line, const char *message);
@@ -143,7 +139,7 @@ yasm__conv_unprint(int ch)
     if (((ch & ~0x7F) != 0) /*!isascii(ch)*/ && !isprint(ch)) {
         unprint[pos++] = 'M';
         unprint[pos++] = '-';
-        ch &= toascii(ch);
+        ch &= 0x7F;
     }
     if (iscntrl(ch)) {
         unprint[pos++] = '^';
