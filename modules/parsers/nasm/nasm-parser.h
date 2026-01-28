@@ -39,6 +39,7 @@ enum tokentype {
     DIRECTIVE_NAME,
     FILENAME,
     STRING,
+    STRING_OP,
     SIZE_OVERRIDE,
     OFFSET,
     DECLARE_DATA,

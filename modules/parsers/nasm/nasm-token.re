@@ -210,6 +210,26 @@ scan:
         }
 
         /* string/character constant values */
+        '__utf16__' | '__utf16le__' {
+            yasm_warn_set(YASM_WARN_GENERAL, N_("scan: UTF string ops aren't supported yet"));
+            lvalp->str.enc = UTF16LE;
+            RETURN(STRING_OP);
+        }
+        '__utf32__' | '__utf32le__' {
+            yasm_warn_set(YASM_WARN_GENERAL, N_("scan: UTF string ops aren't supported yet"));
+            lvalp->str.enc = UTF32LE;
+            RETURN(STRING_OP);
+        }
+        '__utf16be__' {
+            yasm_warn_set(YASM_WARN_GENERAL, N_("scan: UTF string ops aren't supported yet"));
+            lvalp->str.enc = UTF16BE;
+            RETURN(STRING_OP);
+        }
+        '__utf32be__' {
+            yasm_warn_set(YASM_WARN_GENERAL, N_("scan: UTF string ops aren't supported yet"));
+            lvalp->str.enc = UTF32BE;
+            RETURN(STRING_OP);
+        }
         quot {
             endch = s->tok[0];
             goto stringconst;

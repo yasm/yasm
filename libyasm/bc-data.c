@@ -456,6 +456,143 @@ yasm_dv_create_expr(yasm_expr *e)
     return retval;
 }
 
+static int
+next_codepoint(/*@out@*/unsigned int *cpt, unsigned char* u8, size_t len) {
+    char need = 0, seen = 1, low = 0x80, hig = 0xBF;
+    if (len <= 0) return 0;
+    if (0x00 <= *u8 && *u8 <= 0x7F) {
+        *cpt = *u8;
+        return seen;
+    }
+    if (0xC2 <= *u8 && *u8 <= 0xDF) {
+        need = 1;
+        *cpt = *u8 & 0x1F;
+    }
+    if (0xE0 <= *u8 && *u8 <= 0xEF) {
+        need = 2;
+        if (*u8 == 0xE0)
+            low = 0xA0;
+        if (*u8 == 0xED)
+            hig = 0x9F;
+        *cpt = *u8 & 0xF;
+    }
+    if (0xF0 <= *u8 && *u8 <= 0xEF) {
+        need = 3;
+        if (*u8 == 0xF0)
+            low = 0x90;
+        if (*u8 == 0xF4)
+            hig = 0x8F;
+        *cpt = *u8 & 0x7;
+    }
+    u8++; len--;
+    while (len > 0 && need > 0) {
+        if (0x80 <= *u8 && *u8 <= 0xBF) {
+            *cpt = (*cpt << 6) | (*u8 & 0x3F);
+            u8++; len--;
+            need--; seen++;
+        } else {
+            return -seen;
+        }
+    }
+    return seen;
+}
+
+static int
+utf16enc(/*@out@*/unsigned char* u16, unsigned int cpt, char be) {
+    if (cpt <= 0xFFFF) {
+        for (int i=0; i<2; i++) {
+            u16[be?i:1-i] = cpt & 0xFF;
+            cpt >>= 8;
+        }
+        return 2;
+    }
+    if (cpt <= 0x100FFFF) {
+        // 000u uuuu xxxx xxxx xxxx xxxx
+        // wwww = uuuuu - 1
+        unsigned int u1 = ((cpt >> 16) & 0x1FF) - 1,
+                     u2 = cpt & 0xFFFF;
+        // 1101 10ww wwxx xxxx
+        u1 = 0xD800 | (u1 << 6) | (u2 >> 10);
+        for (int i=0; i<2; i++) {
+            u16[be?i:1-i] = u1 & 0xFF;
+            u1 >>= 8;
+        }
+        u16 += 2;
+        // 1101 11xx xxxx xxxx
+        u2 = 0xDC00 | (u2 & 0x3FF);
+        for (int i=0; i<2; i++) {
+            u16[be?i:1-i] = u2 & 0xFF;
+            u2 >>= 8;
+        }
+        return 8;
+    }
+    return -1;
+}
+
+static int
+utf32enc(/*@out@*/unsigned char* u32, unsigned int cpt, char be) {
+    for (int i=0; i<4; i++) {
+        u32[be?3-i:i] = cpt & 0xFF;
+        cpt >>= 8;
+    }
+    return 4;
+}
+
+yasm_dataval *
+yasm_dv_create_string(char *contents, size_t len, yasm_utfenc enc) {
+    unsigned char *raw = (unsigned char*)contents;
+    unsigned char *buf = raw;
+    unsigned int bufn = len;
+    int (*utfenc)(unsigned char*, unsigned int, char);
+    char be;
+
+    // logic borrowed from https://encoding.spec.whatwg.org/#utf-8-decoder
+    // and http://www.unicode.org/versions/Unicode13.0.0/ch03.pdf#G7404
+    switch (enc) {
+        case UTF16BE:
+        case UTF16LE:
+            bufn = len*2;
+            utfenc = utf16enc;
+            be = enc == UTF16BE;
+            break;
+
+        case UTF32BE:
+        case UTF32LE:
+            bufn = len*4;
+            utfenc = utf32enc;
+            be = enc == UTF32BE;
+            break;
+
+        case UTF8:
+        default:
+            break;
+    }
+
+    if (bufn != len) {
+        unsigned int cpt;
+        int j=0;
+        buf = yasm_xmalloc(bufn);
+        for (int i=0; i<len;) {
+            if (j > bufn)
+                goto encodeerr;
+            int read = next_codepoint(&cpt, raw+i, len-i);
+            if (read <= 0)
+                goto encodeerr;
+            i += read;
+            int wrtn = utfenc(buf+j, cpt, be);
+            if (wrtn <= 0)
+                goto encodeerr;
+            j += wrtn;
+        }
+        bufn = j;
+    }
+    return yasm_dv_create_raw(buf, bufn);
+
+encodeerr:
+    yasm_xfree(buf);
+    return NULL;
+}
+
 yasm_dataval *
 yasm_dv_create_raw(unsigned char *contents, unsigned long len)
 {

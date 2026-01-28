@@ -164,6 +164,7 @@ describe_token(int token)
         case DIRECTIVE_NAME:    str = "directive name"; break;
         case FILENAME:          str = "filename"; break;
         case STRING:            str = "string"; break;
+        case STRING_OP:         str = "string enc"; break;
         case SIZE_OVERRIDE:     str = "size override"; break;
         case DECLARE_DATA:      str = "DB/DW/etc."; break;
         case RESERVE_SPACE:     str = "RESB/RESW/etc."; break;
@@ -579,6 +580,34 @@ parse_exp(yasm_parser_nasm *parser_nasm)
 
             yasm_dvs_initialize(&dvs);
             for (;;) {
+                if (curtok == STRING_OP) {
+                    yasm_utfenc enc = STRING_val.enc;
+                    get_next_token();
+                    if (curtok != '(') {
+                        yasm_error_set(YASM_ERROR_SYNTAX,
+                                       N_("expected ( after string op identifier"));
+                        return NULL;
+                    }
+                    get_next_token();
+                    if (curtok != STRING) {
+                        yasm_error_set(YASM_ERROR_SYNTAX,
+                                       N_("expected string argument to string op, got %s"),
+                                       describe_token(curtok));
+                        return NULL;
+                    }
+                    dv = yasm_dv_create_string(STRING_val.contents, STRING_val.len, enc);
+                    if (!dv) {
+                        yasm_error_set(YASM_ERROR_GENERAL, N_("error encoding utf"));
+                    }
+                    get_next_token();
+                    if (curtok != ')') {
+                        yasm_error_set(YASM_ERROR_SYNTAX,
+                                       N_("expected ) enclosing string op argument"));
+                        return NULL;
+                    }
+                    get_next_token();
+                    goto dv_done;
+                }
                 if (curtok == STRING) {
                     /* Peek ahead to see if we're in an expr.  If we're not,
                      * then generate a real string dataval.
@@ -587,7 +616,8 @@ parse_exp(yasm_parser_nasm *parser_nasm)
                     if (parser_nasm->peek_token == ','
                         || is_eol_tok(parser_nasm->peek_token)) {
                         dv = yasm_dv_create_string(STRING_val.contents,
-                                                   STRING_val.len);
+                                                   STRING_val.len,
+                                                   UTF8);
                         get_next_token();
                         goto dv_done;
                     }
