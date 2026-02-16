@@ -1,6 +1,18 @@
 Basic Installation
 ==================
 
+  The latest instructions for building shared library:
+
+  git clone https://github.com/yasm/yasm
+  cd yasm
+  mkdir -v mybuild
+  cd mybuild
+    cmake -DCMAKE_INSTALL_PREFIX="$installdir" ..   # may be /tools/yasm-1.3.0
+    make
+    ctest # No tests supported with cmake compiling
+    make install
+  cd..
+
    These are generic installation instructions.
 
    The `configure' shell script attempts to guess correct values for
@@ -26,6 +38,7 @@ it or regenerate `configure' using a newer version of `autoconf'.
 The simplest way to compile this package is:
 
   1. `cd' to the directory containing the package's source code and type
+     `./autogen.sh' to build "configure' file.  After that type
      `./configure' to configure the package for your system.  If you're
      using `csh' on an old version of System V, you might need to type
      `sh ./configure' instead to prevent `csh' from trying to execute
