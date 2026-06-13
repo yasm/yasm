@@ -10,32 +10,43 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            artifact-name: macOS
-          - os: ubuntu-latest
-            artifact-name: Ubuntu
+          - name: macOS
+            os: macos-latest
+            artifact: true
+            autotools: true
+          - name: Ubuntu
+            os: ubuntu-latest
+            artifact: true
+            autotools: true
 
-    name: "Build - ${{ matrix.artifact-name }}"
+    name: "Build - ${{ matrix.name }}"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Install autotools
+        if: ${{ matrix.autotools }}
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
             brew update
             brew install automake autoconf
           fi
-      - name: Autotools
+      - name: Autogen (autotools)
+        if: ${{ matrix.autotools }}
         run: ./autogen.sh
-      - name: Build
+      - name: Build (autotools)
+        if: ${{ matrix.autotools }}
         run: make
-      - name: Check
+      - name: Check (autotools)
+        if: ${{ matrix.autotools }}
         run: make check
-      - name: Dist
+      - name: Dist (autotools)
+        id: make-dist
+        if: ${{ matrix.autotools }}
         run: make dist
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v7
+        if: ${{ matrix.artifact && always() && steps.make-dist.outcome == 'success' }}
         with:
-          name: ${{ matrix.artifact-name }}
+          name: ${{ matrix.name }}
           path: yasm-*.tar.gz
 
