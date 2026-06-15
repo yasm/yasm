@@ -14,10 +14,15 @@ jobs:
             os: macos-latest
             artifact: true
             autotools: true
+            cmake: true
           - name: Ubuntu
             os: ubuntu-latest
             artifact: true
             autotools: true
+            cmake: true
+          - name: MSVC
+            os: windows-latest
+            cmake: true
 
     name: "Build - ${{ matrix.name }}"
     runs-on: ${{ matrix.os }}
@@ -43,6 +48,13 @@ jobs:
         id: make-dist
         if: ${{ matrix.autotools }}
         run: make dist
+
+      - name: Configure (CMake)
+        if: ${{ matrix.cmake }}
+        run: cmake -S . -B build
+      - name: Build (CMake)
+        if: ${{ matrix.cmake }}
+        run: cmake --build build
 
       - uses: actions/upload-artifact@v7
         if: ${{ matrix.artifact && always() && steps.make-dist.outcome == 'success' }}
