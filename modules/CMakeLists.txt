@@ -84,7 +84,7 @@ SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 IF(BUILD_SHARED_LIBS)
     ADD_LIBRARY(yasmstd MODULE
-        init_plugin.c
+        ${INIT_PLUGIN_C}
         ${YASM_MODULES_SRC}
         )
     TARGET_LINK_LIBRARIES(yasmstd libyasm)
