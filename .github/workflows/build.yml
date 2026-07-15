@@ -51,10 +51,13 @@ jobs:
 
       - name: Configure (CMake)
         if: ${{ matrix.cmake }}
-        run: cmake -S . -B build
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${{github.workspace}}/build/bin" -DCMAKE_LIBRARY_OUTPUT_DIRECTORY="${{github.workspace}}/build/bin"
       - name: Build (CMake)
         if: ${{ matrix.cmake }}
-        run: cmake --build build
+        run: cmake --build build --config Debug
+      - name: Test (CMake)
+        if: ${{ matrix.cmake }}
+        run: ctest --test-dir build -C Debug
 
       - uses: actions/upload-artifact@v7
         if: ${{ matrix.artifact && always() && steps.make-dist.outcome == 'success' }}

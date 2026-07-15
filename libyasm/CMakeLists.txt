@@ -81,3 +81,5 @@ INSTALL(FILES
     value.h
     DESTINATION include/libyasm
     )
+
+ADD_SUBDIRECTORY(tests)
