@@ -10,3 +10,6 @@ YASM_ADD_MODULE(parser_gas
     parsers/gas/gas-parse-intel.c
     gas-token.c
     )
+
+YASM_ADD_MODULE(parser_gnu
+    )

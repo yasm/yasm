@@ -23,3 +23,5 @@ YASM_ADD_MODULE(preproc_nasm
     preprocs/nasm/nasm-eval.c
     )
 
+YASM_ADD_MODULE(preproc_tasm
+    )
