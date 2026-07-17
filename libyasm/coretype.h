@@ -30,9 +30,7 @@
 #ifndef YASM_CORETYPE_H
 #define YASM_CORETYPE_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Architecture instance (mostly opaque type).  \see arch.h for details. */
 typedef struct yasm_arch yasm_arch;

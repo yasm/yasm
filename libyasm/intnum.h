@@ -30,9 +30,7 @@
 #ifndef YASM_INTNUM_H
 #define YASM_INTNUM_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Initialize intnum internal data structures. */
 YASM_LIB_DECL

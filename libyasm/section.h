@@ -30,9 +30,7 @@
 #ifndef YASM_SECTION_H
 #define YASM_SECTION_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Basic YASM relocation.  Object formats will need to extend this
  * structure with additional fields for relocation type, etc.

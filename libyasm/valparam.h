@@ -30,9 +30,7 @@
 #ifndef YASM_VALPARAM_H
 #define YASM_VALPARAM_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Value/parameter pair.  \internal */
 struct yasm_valparam {

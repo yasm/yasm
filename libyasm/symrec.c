@@ -550,7 +550,7 @@ yasm_symrec_get_label(const yasm_symrec *sym,
 {
     if (!(sym->type == SYM_LABEL || sym->type == SYM_CURPOS)
         || !sym->value.precbc) {
-        *precbc = (yasm_symrec_get_label_bytecodep)0xDEADBEEF;
+        *precbc = (yasm_symrec_get_label_bytecodep)(uintptr_t)0xDEADBEEF;
         return 0;
     }
     *precbc = sym->value.precbc;

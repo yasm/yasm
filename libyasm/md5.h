@@ -3,9 +3,7 @@
 #ifndef YASM_MD5_H
 #define YASM_MD5_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /* Unlike previous versions of this code, uint32 need not be exactly
    32 bits, merely 32 bits or more.  Choosing a data type which is 32

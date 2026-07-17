@@ -36,23 +36,7 @@
 
 #include "errwarn.h"
 #include "floatnum.h"
-
-
-/* 97-bit internal floating point format:
- * 0000000s eeeeeeee eeeeeeee m.....................................m
- * Sign          exponent     mantissa (80 bits)
- *                            79                                    0
- *
- * Only L.O. bit of Sign byte is significant.  The rest is zero.
- * Exponent is bias 32767.
- * Mantissa does NOT have an implied one bit (it's explicit).
- */
-struct yasm_floatnum {
-    /*@only@*/ wordptr mantissa;        /* Allocated to MANT_BITS bits */
-    unsigned short exponent;
-    unsigned char sign;
-    unsigned char flags;
-};
+#include "floatnum_internal.h"
 
 /* constants describing parameters of internal floating point format */
 #define MANT_BITS       80

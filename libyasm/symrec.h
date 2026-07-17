@@ -30,9 +30,7 @@
 #ifndef YASM_SYMREC_H
 #define YASM_SYMREC_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Symbol status.  YASM_SYM_DEFINED is set by yasm_symtab_define_label(),
  * yasm_symtab_define_equ(), or yasm_symtab_declare()/yasm_symrec_declare()

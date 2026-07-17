@@ -62,6 +62,7 @@ modinclude_HEADERS += libyasm/hamt.h
 modinclude_HEADERS += libyasm/insn.h
 modinclude_HEADERS += libyasm/intnum.h
 modinclude_HEADERS += libyasm/inttree.h
+modinclude_HEADERS += libyasm/libyasm_decl.h
 modinclude_HEADERS += libyasm/linemap.h
 modinclude_HEADERS += libyasm/listfmt.h
 modinclude_HEADERS += libyasm/md5.h
@@ -75,6 +76,7 @@ modinclude_HEADERS += libyasm/symrec.h
 modinclude_HEADERS += libyasm/valparam.h
 modinclude_HEADERS += libyasm/value.h
 
+EXTRA_DIST += libyasm/floatnum_internal.h
 EXTRA_DIST += libyasm/tests/Makefile.inc
 
 include libyasm/tests/Makefile.inc

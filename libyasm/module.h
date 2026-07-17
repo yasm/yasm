@@ -27,9 +27,7 @@
 #ifndef YASM_MODULE_H
 #define YASM_MODULE_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 typedef enum yasm_module_type {
     YASM_MODULE_ARCH = 0,

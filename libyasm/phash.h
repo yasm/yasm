@@ -8,9 +8,7 @@ Source is http://burtleburtle.net/bob/c/lookupa.h
 ------------------------------------------------------------------------------
 */
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 YASM_LIB_DECL
 unsigned long phash_lookup(const char *k, size_t length,

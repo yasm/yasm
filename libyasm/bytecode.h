@@ -30,9 +30,7 @@
 #ifndef YASM_BYTECODE_H
 #define YASM_BYTECODE_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** A data value (opaque type). */
 typedef struct yasm_dataval yasm_dataval;

@@ -30,9 +30,7 @@
 #ifndef YASM_INSN_H
 #define YASM_INSN_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Base structure for an effective address.  As with all base
  * structures, must be present as the first element in any

@@ -30,9 +30,7 @@
 #ifndef YASM_ASSOCDAT_H
 #define YASM_ASSOCDAT_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Associated data container. */
 typedef struct yasm__assoc_data yasm__assoc_data;
