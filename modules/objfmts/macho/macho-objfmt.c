@@ -1605,6 +1605,7 @@ parse_version(unsigned long *out, const yasm_valparam *vp)
         return;
     }
 
+    subminor = 0;
     m = sscanf(vp->param.str, "%lu.%lu.%lu", &major, &minor, &subminor);
     if (m < 2) {
         yasm_error_set(YASM_ERROR_VALUE,
