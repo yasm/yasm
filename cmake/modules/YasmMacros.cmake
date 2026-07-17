@@ -58,31 +58,24 @@ macro (YASM_ADD_MODULE _module_NAME)
 endmacro (YASM_ADD_MODULE)
 
 macro (YASM_GENPERF _in_NAME _out_NAME)
-    get_target_property(_tmp_GENPERF_EXE genperf LOCATION)
     add_custom_command(
         OUTPUT ${_out_NAME}
-        COMMAND ${_tmp_GENPERF_EXE} ${_in_NAME} ${_out_NAME}
-        DEPENDS ${_tmp_GENPERF_EXE}
+        COMMAND yasm::genperf ${_in_NAME} ${_out_NAME}
         MAIN_DEPENDENCY ${_in_NAME}
         )
 endmacro (YASM_GENPERF)
 
 macro (YASM_RE2C _in_NAME _out_NAME)
-    get_target_property(_tmp_RE2C_EXE re2c LOCATION)
     add_custom_command(
         OUTPUT ${_out_NAME}
-        COMMAND ${_tmp_RE2C_EXE} ${ARGN} -o ${_out_NAME} ${_in_NAME}
-        DEPENDS ${_tmp_RE2C_EXE}
-        MAIN_DEPENDENCY ${_in_NAME}
+        COMMAND yasm::re2c ${ARGN} -o ${_out_NAME} ${_in_NAME}
         )
 endmacro (YASM_RE2C)
 
 macro (YASM_GENMACRO _in_NAME _out_NAME _var_NAME)
-    get_target_property(_tmp_GENMACRO_EXE genmacro LOCATION)
     add_custom_command(
         OUTPUT ${_out_NAME}
-        COMMAND ${_tmp_GENMACRO_EXE} ${_out_NAME} ${_var_NAME} ${_in_NAME}
-        DEPENDS ${_tmp_GENMACRO_EXE}
+        COMMAND yasm::genmacro ${_out_NAME} ${_var_NAME} ${_in_NAME}
         MAIN_DEPENDENCY ${_in_NAME}
         )
 endmacro (YASM_GENMACRO)

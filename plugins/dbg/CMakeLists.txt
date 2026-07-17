@@ -54,3 +54,6 @@ ADD_LIBRARY(dbgmod MODULE
     dbg-objfmt.c
     )
 TARGET_LINK_LIBRARIES(dbgmod ${YASM_LIBRARY})
+if(WIN32)
+    SET_PROPERTY(TARGET dbgmod PROPERTY PREFIX "")
+endif()

@@ -6,3 +6,11 @@ add_executable(genperf
     ../../libyasm/xstrdup.c
     )
 set_target_properties(genperf PROPERTIES COMPILE_FLAGS -DYASM_LIB_DECL=)
+
+if(CMAKE_CROSSCOMPILING)
+    find_program(GENPERF_BIN NAMES genperf REQUIRED)
+    add_executable(yasm::genperf IMPORTED GLOBAL)
+    set_property(TARGET yasm::genperf PROPERTY IMPORTED_LOCATION "${GENPERF_BIN}")
+else()
+    add_executable(yasm::genperf ALIAS genperf)
+endif()

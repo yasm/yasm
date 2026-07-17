@@ -1,9 +1,15 @@
 add_executable(genversion preprocs/nasm/genversion.c)
-get_target_property(_tmp_GENVERSION_EXE genversion LOCATION)
+if(CMAKE_CROSSCOMPILING)
+    find_program(GENVERSION_BIN NAMES genversion REQUIRED)
+    add_executable(yasm::genversion IMPORTED GLOBAL)
+    set_property(TARGET yasm::genversion PROPERTY IMPORTED_LOCATION "${GENVERSION_BIN}")
+else()
+    add_executable(yasm::genversion ALIAS genversion)
+endif()
+
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/version.mac
-    COMMAND ${_tmp_GENVERSION_EXE} ${CMAKE_CURRENT_BINARY_DIR}/version.mac
-    DEPENDS ${_tmp_GENVERSION_EXE}
+    COMMAND yasm::genversion ${CMAKE_CURRENT_BINARY_DIR}/version.mac
     )
 
 YASM_GENMACRO(
