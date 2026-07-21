@@ -22,6 +22,8 @@ IF(BUILD_SHARED_LIBS)
         ${yasm_SOURCE_DIR}/frontends/yasm/yasm-plugin.c
         )
     TARGET_LINK_LIBRARIES(vsyasm libyasm ${LIBDL})
+    ADD_DEPENDENCIES(vsyasm yasmstd)
+    SET_PROPERTY(TARGET vsyasm APPEND PROPERTY BUILD_RPATH "$<TARGET_FILE_DIR:yasmstd>")
 ELSE(BUILD_SHARED_LIBS)
     ADD_EXECUTABLE(vsyasm
         vsyasm.c
