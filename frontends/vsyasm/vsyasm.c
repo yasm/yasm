@@ -911,6 +911,13 @@ opt_objfmt_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     size_t i;
     assert(param != NULL);
+#if 1
+    if (!yasm__strcasecmp(param, "win32")) {
+        param = "win32";
+    } else if (!yasm__strcasecmp(param, "win64") || !yasm__strcasecmp(param, "x64")) {
+        param = "win64";
+    }
+#endif
     cur_objfmt_module = yasm_load_objfmt(param);
     if (!cur_objfmt_module) {
         if (!strcmp("help", param)) {
