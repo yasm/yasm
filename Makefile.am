@@ -119,83 +119,6 @@ EXTRA_DIST += Mkfiles/Makefile.flat
 EXTRA_DIST += Mkfiles/Makefile.dj
 EXTRA_DIST += Mkfiles/dj/config.h
 EXTRA_DIST += Mkfiles/dj/libyasm-stdint.h
-EXTRA_DIST += Mkfiles/vc9/config.h
-EXTRA_DIST += Mkfiles/vc9/crt_secure_no_deprecate.vsprops
-EXTRA_DIST += Mkfiles/vc9/libyasm-stdint.h
-EXTRA_DIST += Mkfiles/vc9/readme.vc9.txt
-EXTRA_DIST += Mkfiles/vc9/vc98_swap.py
-EXTRA_DIST += Mkfiles/vc9/vsyasm.vcproj
-EXTRA_DIST += Mkfiles/vc9/yasm.sln
-EXTRA_DIST += Mkfiles/vc9/yasm.vcproj
-EXTRA_DIST += Mkfiles/vc9/ytasm.vcproj
-EXTRA_DIST += Mkfiles/vc9/yasm.rules
-EXTRA_DIST += Mkfiles/vc9/genmacro/genmacro.vcproj
-EXTRA_DIST += Mkfiles/vc9/genmacro/run.bat
-EXTRA_DIST += Mkfiles/vc9/genmodule/genmodule.vcproj
-EXTRA_DIST += Mkfiles/vc9/genmodule/run.bat
-EXTRA_DIST += Mkfiles/vc9/genperf/genperf.vcproj
-EXTRA_DIST += Mkfiles/vc9/genperf/run.bat
-EXTRA_DIST += Mkfiles/vc9/genstring/genstring.vcproj
-EXTRA_DIST += Mkfiles/vc9/genstring/run.bat
-EXTRA_DIST += Mkfiles/vc9/genversion/genversion.vcproj
-EXTRA_DIST += Mkfiles/vc9/genversion/run.bat
-EXTRA_DIST += Mkfiles/vc9/libyasm/libyasm.vcproj
-EXTRA_DIST += Mkfiles/vc9/modules/modules.vcproj
-EXTRA_DIST += Mkfiles/vc9/re2c/re2c.vcproj
-EXTRA_DIST += Mkfiles/vc9/re2c/run.bat
-EXTRA_DIST += Mkfiles/vc10/config.h
-EXTRA_DIST += Mkfiles/vc10/crt_secure_no_deprecate.props
-EXTRA_DIST += Mkfiles/vc10/crt_secure_no_deprecate.vsprops
-EXTRA_DIST += Mkfiles/vc10/libyasm-stdint.h
-EXTRA_DIST += Mkfiles/vc10/out_copy_rename.bat
-EXTRA_DIST += Mkfiles/vc10/readme.vc10.txt
-EXTRA_DIST += Mkfiles/vc10/vsyasm.props
-EXTRA_DIST += Mkfiles/vc10/vsyasm.targets
-EXTRA_DIST += Mkfiles/vc10/vsyasm.vcxproj
-EXTRA_DIST += Mkfiles/vc10/vsyasm.xml
-EXTRA_DIST += Mkfiles/vc10/yasm.sln
-EXTRA_DIST += Mkfiles/vc10/yasm.vcxproj
-EXTRA_DIST += Mkfiles/vc10/yasm.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc10/ytasm.vcxproj
-EXTRA_DIST += Mkfiles/vc10/genmacro/genmacro.vcxproj
-EXTRA_DIST += Mkfiles/vc10/genmacro/genmacro.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc10/genmacro/run.bat
-EXTRA_DIST += Mkfiles/vc10/genmodule/genmodule.vcxproj
-EXTRA_DIST += Mkfiles/vc10/genmodule/genmodule.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc10/genmodule/run.bat
-EXTRA_DIST += Mkfiles/vc10/genperf/genperf.vcxproj
-EXTRA_DIST += Mkfiles/vc10/genperf/genperf.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc10/genperf/run.bat
-EXTRA_DIST += Mkfiles/vc10/genstring/genstring.vcxproj
-EXTRA_DIST += Mkfiles/vc10/genstring/genstring.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc10/genstring/run.bat
-EXTRA_DIST += Mkfiles/vc10/genversion/genversion.vcxproj
-EXTRA_DIST += Mkfiles/vc10/genversion/genversion.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc10/genversion/run.bat
-EXTRA_DIST += Mkfiles/vc10/libyasm/libyasm.vcxproj
-EXTRA_DIST += Mkfiles/vc10/libyasm/libyasm.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc10/modules/modules.vcxproj
-EXTRA_DIST += Mkfiles/vc10/modules/modules.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc10/re2c/re2c.vcxproj
-EXTRA_DIST += Mkfiles/vc10/re2c/re2c.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc10/re2c/run.bat
-EXTRA_DIST += Mkfiles/vc12/config.h
-EXTRA_DIST += Mkfiles/vc12/crt_secure_no_deprecate.props
-EXTRA_DIST += Mkfiles/vc12/crt_secure_no_deprecate.vsprops
-EXTRA_DIST += Mkfiles/vc12/libyasm/libyasm.vcxproj
-EXTRA_DIST += Mkfiles/vc12/libyasm/libyasm.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc12/modules/modules.vcxproj
-EXTRA_DIST += Mkfiles/vc12/modules/modules.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc12/out_copy_rename.bat
-EXTRA_DIST += Mkfiles/vc12/readme.vc12.txt
-EXTRA_DIST += Mkfiles/vc12/vsyasm.props
-EXTRA_DIST += Mkfiles/vc12/vsyasm.targets
-EXTRA_DIST += Mkfiles/vc12/vsyasm.vcxproj
-EXTRA_DIST += Mkfiles/vc12/vsyasm.xml
-EXTRA_DIST += Mkfiles/vc12/yasm.sln
-EXTRA_DIST += Mkfiles/vc12/yasm.vcxproj
-EXTRA_DIST += Mkfiles/vc12/yasm.vcxproj.filters
-EXTRA_DIST += Mkfiles/vc12/ytasm.vcxproj
 
 # Until this gets fixed in automake
 DISTCLEANFILES += libyasm/stamp-h libyasm/stamp-h[0-9]*
@@ -203,9 +126,6 @@ DISTCLEANFILES += libyasm/stamp-h libyasm/stamp-h[0-9]*
 dist-hook: YASM-VERSION-FILE YASM-VERSION.h
 	cp YASM-VERSION-FILE $(distdir)/version
 	cp YASM-VERSION.h $(distdir)/Mkfiles/dj/
-	cp YASM-VERSION.h $(distdir)/Mkfiles/vc9/
-	cp YASM-VERSION.h $(distdir)/Mkfiles/vc10/
-	cp YASM-VERSION.h $(distdir)/Mkfiles/vc12/
 
 YASM-VERSION-FILE: $(top_srcdir)/YASM-VERSION-GEN.sh
 	$(top_srcdir)/YASM-VERSION-GEN.sh
