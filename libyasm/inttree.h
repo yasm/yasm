@@ -1,9 +1,7 @@
 #ifndef YASM_INTTREE_H
 #define YASM_INTTREE_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /* The interval_tree.h and interval_tree.cc files contain code for 
  * interval trees implemented using red-black-trees as described in

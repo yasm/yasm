@@ -34,15 +34,13 @@ ADD_LIBRARY(libyasm
 IF(BUILD_SHARED_LIBS)
     SET_TARGET_PROPERTIES(libyasm PROPERTIES
         OUTPUT_NAME "yasm"
-        COMPILE_FLAGS -DYASM_LIB_SOURCE
+        DEFINE_SYMBOL "YASM_LIB_SOURCE"
         )
     if(WIN32)
         SET_PROPERTY(TARGET libyasm PROPERTY PREFIX "")
     endif()
 ELSE(BUILD_SHARED_LIBS)
-    SET_TARGET_PROPERTIES(libyasm PROPERTIES
-        COMPILE_FLAGS -DYASM_LIB_SOURCE
-        )
+    TARGET_COMPILE_DEFINITIONS(libyasm PUBLIC LIBYASM_STATIC)
 ENDIF(BUILD_SHARED_LIBS)
 
 INSTALL(TARGETS libyasm
@@ -67,6 +65,7 @@ INSTALL(FILES
     insn.h
     intnum.h
     inttree.h
+    libyasm_decl.h
     linemap.h
     listfmt.h
     md5.h

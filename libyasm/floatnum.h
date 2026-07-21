@@ -32,9 +32,7 @@
 #ifndef YASM_FLOATNUM_H
 #define YASM_FLOATNUM_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Initialize floatnum internal data structures. */
 YASM_LIB_DECL

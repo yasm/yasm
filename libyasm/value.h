@@ -30,9 +30,7 @@
 #ifndef YASM_VALUE_H
 #define YASM_VALUE_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Initialize a #yasm_value with just an expression.  No processing is
  * performed, the expression is simply stuck into value.abs and the other

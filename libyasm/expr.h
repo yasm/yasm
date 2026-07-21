@@ -30,9 +30,7 @@
 #ifndef YASM_EXPR_H
 #define YASM_EXPR_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Type of an expression item.  Types are listed in canonical sorting order.
  * See expr_order_terms().

@@ -30,9 +30,7 @@
 #ifndef YASM_ERRWARN_H
 #define YASM_ERRWARN_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Warning classes (that may be enabled/disabled). */
 typedef enum yasm_warn_class {

@@ -27,7 +27,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "libyasm/floatnum.c"
+#include <libyasm.h>
+#include "libyasm/floatnum_internal.h"
 
 /* constants describing parameters of internal floating point format.
  *  (these should match those in src/floatnum.c !)

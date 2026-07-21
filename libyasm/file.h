@@ -30,9 +30,7 @@
 #ifndef YASM_FILE_H
 #define YASM_FILE_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Re2c scanner state. */
 typedef struct yasm_scanner {

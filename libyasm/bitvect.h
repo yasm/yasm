@@ -13,9 +13,8 @@
 /*        and your own application(s) which might - directly or indirectly - */
 /*        include this definitions file.                                     */
 /*****************************************************************************/
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+
+#include "libyasm_decl.h"
 
 typedef  unsigned   char    N_char;
 typedef  unsigned   char    N_byte;

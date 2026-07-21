@@ -30,9 +30,7 @@
 #ifndef YASM_LINEMAP_H
 #define YASM_LINEMAP_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Create a new line mapping repository.
  * \return New repository.

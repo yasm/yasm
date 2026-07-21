@@ -30,9 +30,7 @@
 #ifndef YASM_HAMT_H
 #define YASM_HAMT_H
 
-#ifndef YASM_LIB_DECL
-#define YASM_LIB_DECL
-#endif
+#include "libyasm_decl.h"
 
 /** Hash array mapped trie data structure (opaque type). */
 typedef struct HAMT HAMT;
