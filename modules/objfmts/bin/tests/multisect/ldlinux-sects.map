@@ -2,7 +2,7 @@
 - YASM Map file ---------------------------------------------------------------
 
 Source file:  -
-Output file:  results/ldlinux-sects
+Output file:  ldlinux-sects
 
 -- Program origin -------------------------------------------------------------
 

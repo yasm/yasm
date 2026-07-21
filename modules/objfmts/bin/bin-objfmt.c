@@ -30,6 +30,7 @@
 #include <unistd.h>
 #endif
 #include <libyasm.h>
+#include <string.h>
 
 
 #define REGULAR_OUTBUF_SIZE     1024
@@ -778,7 +779,15 @@ output_map(bin_objfmt_output_info *info)
     for (i=0; i<63; i++)
         fputc('-', f);
     fprintf(f, "\n\nSource file:  %s\n", info->object->src_filename);
-    fprintf(f, "Output file:  %s\n\n", info->object->obj_filename);
+    if (getenv("YASM_TEST_SUITE")) {
+        const char *filename = info->object->obj_filename;
+        const char *next_filename;
+        while ((next_filename = strpbrk(filename, "/\\")))
+            filename = next_filename + 1;
+        fprintf(f, "Output file:  %s\n\n", filename);
+    } else {
+        fprintf(f, "Output file:  %s\n\n", info->object->obj_filename);
+    }
 
     fprintf(f, "-- Program origin ");
     for (i=0; i<61; i++)

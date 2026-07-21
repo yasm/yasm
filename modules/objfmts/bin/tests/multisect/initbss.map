@@ -2,7 +2,7 @@
 - YASM Map file ---------------------------------------------------------------
 
 Source file:  -
-Output file:  results/initbss
+Output file:  initbss
 
 -- Program origin -------------------------------------------------------------
 
