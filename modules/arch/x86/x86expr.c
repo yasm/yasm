@@ -543,6 +543,10 @@ x86_checkea_calc_displen(x86_effaddr *x86_ea, unsigned int wordsize, int noreg,
         /* It fits into a signed byte */
         x86_ea->ea.disp.size = 8;
         x86_ea->modrm |= 0100;
+    } else if (wordsize == 32 && yasm_intnum_in_range(num, 0xffffff80, 0xffffffff)) {
+        /* It fits into a signed byte via sign extension */
+        x86_ea->ea.disp.size = 8;
+        x86_ea->modrm |= 0100;
     } else {
         /* It's a 16/32-bit displacement */
         x86_ea->ea.disp.size = wordsize;
