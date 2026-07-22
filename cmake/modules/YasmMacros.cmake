@@ -69,6 +69,7 @@ macro (YASM_RE2C _in_NAME _out_NAME)
     add_custom_command(
         OUTPUT ${_out_NAME}
         COMMAND yasm::re2c ${ARGN} -o ${_out_NAME} ${_in_NAME}
+        MAIN_DEPENDENCY ${_in_NAME}
         )
 endmacro (YASM_RE2C)
 
