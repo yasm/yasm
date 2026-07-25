@@ -184,6 +184,7 @@ parse_cmdline(int argc, char **argv, opt_option *options, size_t nopts,
         }
     }
 
+    (void) warnings;
     DEBUG((stderr, "parse_cmdline: finished\n"));
     return errors;
 }

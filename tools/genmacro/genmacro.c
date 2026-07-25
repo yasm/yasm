@@ -40,8 +40,6 @@ main(int argc, char *argv[])
     char *strp;
     char *charp;
     int fline;
-    int line = 0;
-    int lindex = 0;
     size_t len;
 
     if (argc < 4) {
@@ -74,7 +72,6 @@ main(int argc, char *argv[])
         fline = 0;
 
         while (fgets(str, MAXLINE, in)) {
-            line++;
             fline++;
 
             strp = str;
@@ -119,7 +116,6 @@ main(int argc, char *argv[])
                 strp++;
             }
             fprintf(out, "\",\n");
-            lindex++;
         }
 
         fclose(in);
