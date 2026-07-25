@@ -656,9 +656,10 @@ x86_bc_insn_expand(yasm_bytecode *bc, int span, long old_val, long new_val,
     x86_insn *insn = (x86_insn *)bc->contents;
     x86_effaddr *x86_ea = insn->x86_ea;
     yasm_effaddr *ea = NULL;
+    yasm_value *imm;
     if (x86_ea != NULL)
         ea = &x86_ea->ea;
-    yasm_value *imm = insn->imm;
+    imm = insn->imm;
 
     if (ea && span == 1) {
         /* Change displacement length into word-sized */
