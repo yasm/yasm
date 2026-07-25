@@ -28,8 +28,10 @@ do
     og=`echo ${asm} | sed 's,.asm$,.hex,'`
     e=${a}.ew
     eg=`echo ${asm} | sed 's,.asm$,.errwarn,'`
+    egp=1
     if test \! -f ${eg}; then
         eg=/dev/null
+        egp=0
     fi
 
     # Run within a subshell to prevent signal messages from displaying.
@@ -42,7 +44,7 @@ do
         failedct=`expr $failedct + 1`
     elif test $status -gt 0; then
         echo ${asm} | grep err >/dev/null
-        if test $? -gt 0; then
+        if test \( $? -gt 0 \) -a \( \! $egp \); then
             # YASM detected errors but shouldn't have!
             echo $ECHO_N "E$ECHO_C"
             eval "failed$failedct='E: ${a} returned an error code!'"
