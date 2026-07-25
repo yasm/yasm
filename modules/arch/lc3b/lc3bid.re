@@ -341,7 +341,7 @@ lc3b_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
 
 #define YYCTYPE         unsigned char
 #define YYCURSOR        id
-#define YYLIMIT         id
+#define YYLIMIT         id_end
 #define YYMARKER        marker
 #define YYFILL(n)       (void)(n)
 
@@ -350,6 +350,7 @@ yasm_lc3b__parse_check_regtmod(yasm_arch *arch, const char *oid, size_t id_len,
                                uintptr_t *data)
 {
     const YYCTYPE *id = (const YYCTYPE *)oid;
+    const YYCTYPE *const id_end = (const YYCTYPE *)(oid + id_len);
     /*const char *marker;*/
     /*!re2c
         /* integer registers */
@@ -382,6 +383,7 @@ yasm_lc3b__parse_check_insnprefix(yasm_arch *arch, const char *oid,
                                   yasm_bytecode **bc, uintptr_t *prefix)
 {
     const YYCTYPE *id = (const YYCTYPE *)oid;
+    const YYCTYPE *const id_end = (const YYCTYPE *)(oid + id_len);
     const lc3b_insn_info *group = empty_insn;
     unsigned long mod = 0;
     unsigned int nelems = NELEMS(empty_insn);
