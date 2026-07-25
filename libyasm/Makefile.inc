@@ -14,6 +14,7 @@ libyasm_a_SOURCES += libyasm/hamt.c
 libyasm_a_SOURCES += libyasm/insn.c
 libyasm_a_SOURCES += libyasm/intnum.c
 libyasm_a_SOURCES += libyasm/inttree.c
+libyasm_a_SOURCES += libyasm/libyasm.def
 libyasm_a_SOURCES += libyasm/linemap.c
 libyasm_a_SOURCES += libyasm/md5.c
 libyasm_a_SOURCES += libyasm/mergesort.c
