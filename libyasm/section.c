@@ -132,7 +132,7 @@ dir_privextern(yasm_object *object, yasm_valparamhead *valparams,
     if (!objext_valparams) {
         yasm_valparam *vp;
 
-        vp = yasm_vp_create_id(NULL, strdup("private_extern"), '$');
+        vp = yasm_vp_create_id(NULL, yasm__xstrdup("private_extern"), '$');
         yasm_vps_append(&vps, vp);
         objext_valparams = &vps;
     }
