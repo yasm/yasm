@@ -36,5 +36,5 @@ goto :eof
 
 :update
 %1 %2 tf
-call mkfiles\vc14\out_copy_rename tf .\ %3
+call mkfiles\vs\out_copy_rename tf .\ %3
 del tf
