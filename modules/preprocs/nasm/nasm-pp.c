@@ -3950,8 +3950,7 @@ expand_mmac_params(Token * tline)
                                     n = (n + mac->rotate) % mac->nparam;
                                 tt = mac->params[n];
                             }
-                            cc = find_cc(tt);
-                            if (cc == -1)
+                            if (!tt)
                             {
                                 error(ERR_NONFATAL,
                                         "macro parameter %d is not a condition code",
@@ -3960,18 +3959,29 @@ expand_mmac_params(Token * tline)
                             }
                             else
                             {
-                                type = TOK_ID;
-                                if (inverse_ccs[cc] == -1)
+                                cc = find_cc(tt);
+                                if (cc == -1)
                                 {
                                     error(ERR_NONFATAL,
-                                            "condition code `%s' is not invertible",
-                                            conditions[cc]);
+                                            "macro parameter %d is not a condition code",
+                                            n + 1);
                                     text = NULL;
                                 }
                                 else
-                                    text =
-                                            nasm_strdup(conditions[inverse_ccs
-                                                     [cc]]);
+                                {
+                                    type = TOK_ID;
+                                    if (inverse_ccs[cc] == -1)
+                                    {
+                                        error(ERR_NONFATAL,
+                                                "condition code `%s' is not invertible",
+                                                conditions[cc]);
+                                        text = NULL;
+                                    }
+                                    else
+                                        text =
+                                                nasm_strdup(conditions[inverse_ccs
+                                                         [cc]]);
+                                }
                             }
                             break;
                         case '+':
@@ -3984,8 +3994,7 @@ expand_mmac_params(Token * tline)
                                     n = (n + mac->rotate) % mac->nparam;
                                 tt = mac->params[n];
                             }
-                            cc = find_cc(tt);
-                            if (cc == -1)
+                            if (!tt)
                             {
                                 error(ERR_NONFATAL,
                                         "macro parameter %d is not a condition code",
@@ -3994,8 +4003,19 @@ expand_mmac_params(Token * tline)
                             }
                             else
                             {
-                                type = TOK_ID;
-                                text = nasm_strdup(conditions[cc]);
+                                cc = find_cc(tt);
+                                if (cc == -1)
+                                {
+                                    error(ERR_NONFATAL,
+                                            "macro parameter %d is not a condition code",
+                                            n + 1);
+                                    text = NULL;
+                                }
+                                else
+                                {
+                                    type = TOK_ID;
+                                    text = nasm_strdup(conditions[cc]);
+                                }
                             }
                             break;
                         default:

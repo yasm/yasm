@@ -1,0 +1,4 @@
+-:9: error: (ret_if_cc:1) macro parameter 2 is not a condition code
+-:9: error: instruction expected after label
+-:9: error: (ret_if_cc:3) macro parameter 2 is not a condition code
+-:9: error: instruction expected after label
