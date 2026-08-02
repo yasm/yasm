@@ -3,13 +3,13 @@
 #
 # autoconf setup
 #
-AC_PREREQ(2.53)
+AC_PREREQ([2.70])
 AC_INIT([yasm],
-       	m4_esyscmd([./YASM-VERSION-GEN.sh && tr -d '\n' <YASM-VERSION-FILE]),
-        [bug-yasm@tortall.net])
+	[m4_esyscmd(./YASM-VERSION-GEN.sh && tr -d '\n' <YASM-VERSION-FILE)],
+	[bug-yasm@tortall.net])
 #AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_AUX_DIR(config)
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 AM_INIT_AUTOMAKE([1.9.6 foreign subdir-objects])
 AM_MAINTAINER_MODE
@@ -18,8 +18,7 @@ AM_MAINTAINER_MODE
 # autoconf command-line options
 #
 AC_ARG_ENABLE(debug,
-AC_HELP_STRING([--enable-debug],
-	       [Turn on debugging and compile time warnings]),
+AS_HELP_STRING([--enable-debug], [Turn on debugging and compile time warnings]),
 [case "${enableval}" in
   yes) debugging="yes" ;;
   no)  debugging="no" ;;
@@ -27,7 +26,7 @@ AC_HELP_STRING([--enable-debug],
 esac])
 
 AC_ARG_ENABLE(warnerror,
-AC_HELP_STRING([--enable-warnerror],[Treat GCC warnings as errors]),
+AS_HELP_STRING([--enable-warnerror], [Treat GCC warnings as errors]),
 [case "${enableval}" in
   yes) warnerror="yes" ;;
   no)  warnerror="no" ;;
@@ -35,7 +34,7 @@ AC_HELP_STRING([--enable-warnerror],[Treat GCC warnings as errors]),
 esac])
 
 AC_ARG_ENABLE(profiling,
-AC_HELP_STRING([--enable-profiling],[Enable profiling (requires GCC)]),
+AS_HELP_STRING([--enable-profiling], [Enable profiling (requires GCC)]),
 [case "${enableval}" in
   yes) profiling="yes" ;;
   no)  profiling="no" ;;
@@ -43,7 +42,7 @@ AC_HELP_STRING([--enable-profiling],[Enable profiling (requires GCC)]),
 esac])
 
 AC_ARG_ENABLE(gcov,
-AC_HELP_STRING([--enable-gcov],[Enable gcov code coverage (requires GCC)]),
+AS_HELP_STRING([--enable-gcov], [Enable gcov code coverage (requires GCC)]),
 [case "${enableval}" in
   yes) gcov="yes" ;;
   no)  gcov="no" ;;
@@ -51,7 +50,7 @@ AC_HELP_STRING([--enable-gcov],[Enable gcov code coverage (requires GCC)]),
 esac])
 
 AC_ARG_ENABLE(python,
-AC_HELP_STRING([--enable-python],[Enable Python-requiring portions of build]),
+AS_HELP_STRING([--enable-python], [Enable Python-requiring portions of build]),
 [case "${enableval}" in
   yes) enable_python="yes" ;;
   no)  enable_python="no" ;;
@@ -59,7 +58,7 @@ AC_HELP_STRING([--enable-python],[Enable Python-requiring portions of build]),
 esac], enable_python="auto")
 
 AC_ARG_ENABLE(python-bindings,
-AC_HELP_STRING([--enable-python-bindings],[Build Python bindings]),
+AS_HELP_STRING([--enable-python-bindings], [Build Python bindings]),
 [case "${enableval}" in
   yes) enable_python_bindings="yes" ;;
   no)  enable_python_bindings="no" ;;
@@ -70,7 +69,7 @@ esac], enable_python_bindings="no")
 # Checks for programs.
 #
 AC_PROG_CPP
-AC_PROG_CC_STDC
+AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 #automake default ARFLAGS to "cru"
