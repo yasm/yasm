@@ -1102,6 +1102,10 @@ hash(char *s)
 {
     unsigned int h = 0;
     unsigned int i = 0;
+    /* Check if the input string is NULL to avoid null pointer dereference */
+    if (s == NULL) {
+        return 0;
+    }
     /*
      * Powers of three, mod 31.
      */
