@@ -10,8 +10,6 @@ ADD_CUSTOM_COMMAND(
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/genstring.py
     )
 
-SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
-
 IF(BUILD_SHARED_LIBS)
     ADD_EXECUTABLE(yasm
         yasm.c
@@ -28,6 +26,11 @@ ELSE(BUILD_SHARED_LIBS)
         )
     TARGET_LINK_LIBRARIES(yasm yasmstd libyasm)
 ENDIF(BUILD_SHARED_LIBS)
+
+# libyasm/tests/incbin.asm depends on stamp-h1
+add_custom_command(TARGET yasm POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E echo "timestamp for config.h" ">$<TARGET_FILE_DIR:yasm>/stamp-h1"
+)
 
 SET_SOURCE_FILES_PROPERTIES(yasm.c PROPERTIES
     OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/license.c
