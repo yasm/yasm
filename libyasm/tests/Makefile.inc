@@ -87,6 +87,9 @@ EXTRA_DIST += libyasm/tests/value-mask.errwarn
 EXTRA_DIST += libyasm/tests/value-mask.hex
 EXTRA_DIST += libyasm/tests/value-shr-symexpr.asm
 EXTRA_DIST += libyasm/tests/value-shr-symexpr.hex
+EXTRA_DIST += libyasm/tests/utf.asm
+EXTRA_DIST += libyasm/tests/utf.hex
+EXTRA_DIST += libyasm/tests/utf.errwarn
 
 check_PROGRAMS += bitvect_test
 check_PROGRAMS += floatnum_test

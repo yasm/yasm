@@ -214,6 +214,9 @@ typedef struct yasm_effaddr yasm_effaddr;
  */
 typedef struct yasm_insn yasm_insn;
 
+/** Possible utf encodings for a string */
+typedef enum yasm_utfenc { UTF8 = 0, UTF16LE, UTF32LE, UTF16BE, UTF32BE } yasm_utfenc;
+
 /** Expression operators usable in #yasm_expr expressions. */
 typedef enum yasm_expr_op {
     YASM_EXPR_IDENT,    /**< No operation, just a value. */
