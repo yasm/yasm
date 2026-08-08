@@ -265,7 +265,7 @@ cpp_preproc_get_line(yasm_preproc *preproc)
         p += strlen(p);
         if (p > buf && p[-1] == '\n')
             break;
-        if ((p-buf) >= bufsize) {
+        if ((p-buf) + 1 >= bufsize) {
             /* Increase size of buffer */
             char *oldbuf = buf;
             bufsize *= 2;
