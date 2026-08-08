@@ -317,6 +317,7 @@ cpp_line_marker(yasm_parser_gas *parser_gas)
     }
 
     filename = STRING_val.contents;
+    filename[STRING_val.len] = '\0';
     get_next_token();
 
     /* Set linemap. */
@@ -1705,7 +1706,7 @@ static dir_lookup dirs_static[] = {
     {".zero",       dir_zero,   0,  INITIAL},
     /* syntax directives */
     {".intel_syntax", dir_intel_syntax, 0, INITIAL},
-    {".att_syntax",   dir_att_syntax,   0, INITIAL},    
+    {".att_syntax",   dir_att_syntax,   0, INITIAL},
     /* other directives */
     {".equ",        dir_equ,    0,  INITIAL},
     {".file",       dir_file,   0,  INITIAL},

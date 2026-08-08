@@ -34,6 +34,14 @@
 
 #define BSIZE 512
 
+#define CL_EXE "cl.exe"
+
+#if !defined(HAVE_POPEN) && defined(_WIN32)
+#define popen _popen
+#define pclose _pclose
+#define HAVE_POPEN
+#endif
+
 /* Pre-declare the preprocessor module object. */
 yasm_preproc_module yasm_cpp_LTX_preproc;
 
@@ -72,6 +80,7 @@ typedef struct yasm_preproc_cpp {
 /* Flag values for yasm_preproc_cpp->flags. */
 #define CPP_HAS_BEEN_INVOKED        0x01
 #define CPP_HAS_GENERATED_DEPS      0x02
+#define CPP_HAS_MS_CPP              0x04 /* use MS compiler for cpp */
 
 /*******************************************************************************
     Internal functions and helpers.
@@ -98,12 +107,14 @@ cpp_build_cmdline(yasm_preproc_cpp *pp, const char *extra)
 {
     char *cmdline, *p, *limit;
     cpp_arg_entry *arg;
+    size_t cpp_len = strlen(CPP_PROG), cl_len = strlen(CL_EXE);
+    int cpp_prog_quoted;
 
     /* Initialize command line. */
-    cmdline = p = yasm_xmalloc(strlen(CPP_PROG)+CMDLINE_SIZE);
+    cmdline = p = yasm_xmalloc(cpp_len +CMDLINE_SIZE);
     limit = p + CMDLINE_SIZE;
     strcpy(p, CPP_PROG);
-    p += strlen(CPP_PROG);
+    p += cpp_len;
 
     arg = TAILQ_FIRST(&pp->cpp_args);
 
@@ -123,7 +134,15 @@ cpp_build_cmdline(yasm_preproc_cpp *pp, const char *extra)
         APPEND(extra);
     }
     /* Append final arguments. */
-    APPEND(" -x assembler-with-cpp ");
+    cpp_prog_quoted = (CPP_PROG[cpp_len-1] == '\"' || CPP_PROG[cpp_len-1] == '\'') ? 1 : 0;
+    if (!yasm__strcasecmp(CPP_PROG, "cl") ||
+        (cpp_len >= cl_len && !yasm__strncasecmp(CPP_PROG + cpp_len - cl_len - cpp_prog_quoted, CL_EXE, cl_len)))
+    {
+        APPEND(" /nologo /E ");
+        pp->flags |= CPP_HAS_MS_CPP;
+    }
+    else
+        APPEND(" -x assembler-with-cpp ");
     APPEND(pp->filename);
 
     return cmdline;
@@ -283,6 +302,18 @@ cpp_preproc_get_line(yasm_preproc *preproc)
     /* Strip the line ending */
     buf[strcspn(buf, "\r\n")] = '\0';
 
+    /* replace ms-style #line \d+ directives with gcc-style */
+    if (pp->flags & CPP_HAS_MS_CPP) {
+        p = buf;
+        while (*p == ' ' || *p == '\t')
+            ++p;
+        if (0 == strncmp(p, "#line ", 6) && (p[6] >= '0' && p[6] <= '9')) /* erase "line" */
+        {
+            p += 1;
+            size_t len = strlen(p);
+            memmove(p, p + 4, len - 4 + 1); /* + 1 for trailing \0 */
+        }
+    }
     return buf;
 }
 
