@@ -44,6 +44,11 @@ yasm_intnum *nasm_readnum (char *str, int *error)
 
     while (lib_isnumchar(*q)) q++;     /* find end of number */
 
+    if (r >= q) {
+        *error = TRUE;
+        return yasm_intnum_create_uint(0);
+    }
+
     /*
      * If it begins 0x, 0X or $, or ends in H, it's in hex. if it
      * ends in Q, it's octal. if it ends in B, it's binary.
