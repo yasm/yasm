@@ -66,11 +66,10 @@ typedef struct cpp_arg_entry {
     char *param;
 } cpp_arg_entry;
 
-/* A file that said "#pragma once", inlined into cl's input already. */
-typedef struct cpp_once_entry {
-    struct cpp_once_entry *next;
+typedef struct cpp_path_entry {
+    struct cpp_path_entry *next;
     char *path;
-} cpp_once_entry;
+} cpp_path_entry;
 
 typedef struct yasm_preproc_cpp {
     yasm_preproc_base preproc;   /* base structure */
@@ -87,7 +86,10 @@ typedef struct yasm_preproc_cpp {
 
     /* The temporary file cl reads instead of filename, and the "#pragma once" files inlined into it. */
     char *ms_input;
-    cpp_once_entry *ms_once;
+    cpp_path_entry *ms_once;
+
+    /* The files cpp_ms_flatten inlined, for the dependency list, and the next one to report. */
+    cpp_path_entry *ms_deps, *ms_dep_next;
 } yasm_preproc_cpp;
 
 /* Flag values for yasm_preproc_cpp->flags. */
@@ -285,21 +287,44 @@ cpp_ms_open_include(yasm_preproc_cpp *pp, const char *from, const char *name, in
 }
 
 static int
-cpp_ms_seen_once(yasm_preproc_cpp *pp, const char *path)
+cpp_path_listed(const cpp_path_entry *list, const char *path)
 {
-    cpp_once_entry *once;
-
-    for (once = pp->ms_once; once; once = once->next) {
-        if (strcmp(once->path, path) == 0)
+    for (; list; list = list->next) {
+        if (strcmp(list->path, path) == 0)
             return 1;
     }
     return 0;
 }
 
+static void
+cpp_list_path(cpp_path_entry **list, const char *path)
+{
+    cpp_path_entry *entry = yasm_xmalloc(sizeof(cpp_path_entry));
+
+    entry->next = NULL;
+    entry->path = yasm__xstrdup(path);
+    while (*list)
+        list = &(*list)->next;
+    *list = entry;
+}
+
+static void
+cpp_free_paths(cpp_path_entry **list)
+{
+    while (*list) {
+        cpp_path_entry *entry = *list;
+
+        *list = entry->next;
+        yasm_xfree(entry->path);
+        yasm_xfree(entry);
+    }
+}
+
 /*
     Writes the file to out with every header it includes inlined in its place, so that cpp_ms_put_line reaches the
     macros defined in headers too; #line markers keep cl's file names and line numbers those of the real files. An
-    include that cannot be found here stays a directive for cl to resolve.
+    include that cannot be found here stays a directive for cl to resolve. Every header inlined goes to ms_deps; with
+    out NULL that is all it does.
 */
 static void
 cpp_ms_flatten(yasm_preproc_cpp *pp, FILE *in, const char *path, FILE *out, int depth)
@@ -308,7 +333,8 @@ cpp_ms_flatten(yasm_preproc_cpp *pp, FILE *in, const char *path, FILE *out, int 
     char *buf = yasm_xmalloc(size);
     unsigned long line = 0;
 
-    cpp_ms_line_marker(out, 1, path);
+    if (out)
+        cpp_ms_line_marker(out, 1, path);
     while (cpp_read_line(in, &buf, &size)) {
         int angle = 0;
         char *name = cpp_include_name(buf, &angle);
@@ -319,19 +345,19 @@ cpp_ms_flatten(yasm_preproc_cpp *pp, FILE *in, const char *path, FILE *out, int 
         if (name && depth < CPP_MAX_INCLUDE_DEPTH)
             inc = cpp_ms_open_include(pp, path, name, angle, &inc_path);
         if (inc) {
-            if (!cpp_ms_seen_once(pp, inc_path))
+            if (!cpp_path_listed(pp->ms_deps, inc_path))
+                cpp_list_path(&pp->ms_deps, inc_path);
+            if (!cpp_path_listed(pp->ms_once, inc_path))
                 cpp_ms_flatten(pp, inc, inc_path, out, depth + 1);
             fclose(inc);
             yasm_xfree(inc_path);
-            cpp_ms_line_marker(out, line + 1, path);
+            if (out)
+                cpp_ms_line_marker(out, line + 1, path);
         } else {
-            if (cpp_is_pragma_once(buf) && !cpp_ms_seen_once(pp, path)) {
-                cpp_once_entry *once = yasm_xmalloc(sizeof(cpp_once_entry));
-                once->path = yasm__xstrdup(path);
-                once->next = pp->ms_once;
-                pp->ms_once = once;
-            }
-            cpp_ms_put_line(out, buf);
+            if (cpp_is_pragma_once(buf) && !cpp_path_listed(pp->ms_once, path))
+                cpp_list_path(&pp->ms_once, path);
+            if (out)
+                cpp_ms_put_line(out, buf);
         }
         if (name)
             yasm_xfree(name);
@@ -483,6 +509,38 @@ cpp_generate_deps(yasm_preproc_cpp *pp)
     yasm_xfree(cmdline);
 }
 
+/* cl has no -M: the included files are the ones cpp_ms_flatten inlines, listed when it made cl's input. */
+static size_t
+cpp_ms_get_included_file(yasm_preproc_cpp *pp, char *buf, size_t max_size)
+{
+    cpp_path_entry *dep;
+    size_t n;
+
+    if (!(pp->flags & CPP_HAS_GENERATED_DEPS)) {
+        pp->flags |= CPP_HAS_GENERATED_DEPS;
+        if (!(pp->flags & CPP_HAS_BEEN_INVOKED)) {
+            FILE *in = fopen(pp->filename, "r");
+
+            if (!in)
+                yasm__fatal(N_("could not open file `%s'"), pp->filename);
+            cpp_ms_flatten(pp, in, pp->filename, NULL, 0);
+            fclose(in);
+        }
+        pp->ms_dep_next = pp->ms_deps;
+    }
+
+    dep = pp->ms_dep_next;
+    if (!dep || max_size == 0)
+        return 0;
+    pp->ms_dep_next = dep->next;
+    n = strlen(dep->path);
+    if (n >= max_size)
+        n = max_size - 1;
+    memcpy(buf, dep->path, n);
+    buf[n] = '\0';
+    return n;
+}
+
 /*******************************************************************************
     Interface functions.
 *******************************************************************************/
@@ -502,6 +560,7 @@ cpp_preproc_create(const char *in, yasm_symtab *symtab, yasm_linemap *lm,
     pp->filename = yasm__xstrdup(in);
     pp->ms_input = NULL;
     pp->ms_once = NULL;
+    pp->ms_deps = pp->ms_dep_next = NULL;
 
     TAILQ_INIT(&pp->cpp_args);
 
@@ -540,12 +599,8 @@ cpp_preproc_destroy(yasm_preproc *preproc)
 
     cpp_destroy_args(pp);
 
-    while (pp->ms_once) {
-        cpp_once_entry *once = pp->ms_once;
-        pp->ms_once = once->next;
-        yasm_xfree(once->path);
-        yasm_xfree(once);
-    }
+    cpp_free_paths(&pp->ms_once);
+    cpp_free_paths(&pp->ms_deps);
     yasm_xfree(pp->filename);
     yasm_xfree(pp);
 }
@@ -625,6 +680,9 @@ cpp_preproc_get_included_file(yasm_preproc *preproc, char *buf,
     int ch = '\0';
     size_t n = 0;
     yasm_preproc_cpp *pp = (yasm_preproc_cpp *)preproc;
+
+    if (pp->flags & CPP_HAS_MS_CPP)
+        return cpp_ms_get_included_file(pp, buf, max_size);
 
     if (! (pp->flags & CPP_HAS_GENERATED_DEPS) ) {
         pp->flags |= CPP_HAS_GENERATED_DEPS;
