@@ -623,20 +623,20 @@ yasm_add_include_path(const char *path)
     STAILQ_INSERT_TAIL(&incpaths, np, link);
 }
 
-static /*@only@*/ /*@null@*/ char *cpp_program = NULL;
+static /*@only@*/ /*@null@*/ char *cpp_command = NULL;
 
 void
-yasm_set_cpp_program(const char *program)
+yasm_set_cpp_command(const char *command)
 {
-    if (cpp_program)
-        yasm_xfree(cpp_program);
-    cpp_program = program ? yasm__xstrdup(program) : NULL;
+    if (cpp_command)
+        yasm_xfree(cpp_command);
+    cpp_command = command ? yasm__xstrdup(command) : NULL;
 }
 
 const char *
-yasm_get_cpp_program(void)
+yasm_get_cpp_command(void)
 {
-    return cpp_program;
+    return cpp_command;
 }
 
 size_t

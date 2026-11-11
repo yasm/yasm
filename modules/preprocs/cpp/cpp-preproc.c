@@ -29,18 +29,32 @@
 #include <util.h>
 #include <libyasm.h>
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <fcntl.h>
+#include <io.h>
 #include <process.h>
+#include <sys/stat.h>
+#else
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #endif
 
-/* TODO: Use autoconf to get the limit on the command line length. */
-#define CMDLINE_SIZE 32770
+/* The longest command line CreateProcess takes. */
+#define CMDLINE_SIZE 32767
 
 #define BSIZE 512
 
-#if !defined(HAVE_POPEN) && defined(_WIN32)
-#define popen _popen
-#define pclose _pclose
-#define HAVE_POPEN
+#ifdef _WIN32
+typedef HANDLE cpp_process;
+/* Quotes that keep blanks in a word of a command; a ' can be part of a Windows path. */
+#define CPP_QUOTES "\""
+#else
+typedef pid_t cpp_process;
+#define CPP_QUOTES "\"'"
 #endif
 
 /* Pre-declare the preprocessor module object. */
@@ -69,17 +83,24 @@ typedef struct cpp_path_entry {
     char *path;
 } cpp_path_entry;
 
+/* A list of arguments being built, ended by NULL. */
+typedef struct cpp_argv {
+    char **items;
+    size_t count, size;
+} cpp_argv;
+
 typedef struct yasm_preproc_cpp {
     yasm_preproc_base preproc;   /* base structure */
 
     /* List of arguments to pass to cpp. */
     TAILQ_HEAD(cpp_arg_head, cpp_arg_entry) cpp_args;
 
-    /* The preprocessor's part of every command line: the program, and for --cpp in gcc mode its -E. */
-    char *command;
+    /* The preprocessor's part of every run: the program, then the options of its command. */
+    cpp_argv command;
 
     char *filename;
     FILE *f, *f_deps;
+    cpp_process process, deps_process;
     yasm_linemap *cur_lm;
     yasm_errwarns *errwarns;
 
@@ -112,34 +133,82 @@ typedef struct yasm_preproc_cpp {
     Internal functions and helpers.
 *******************************************************************************/
 
+static void
+cpp_argv_add(cpp_argv *av, const char *text, size_t len)
+{
+    if (av->count + 2 > av->size) {
+        av->size = av->size ? av->size * 2 : 16;
+        av->items = av->items ? yasm_xrealloc(av->items, av->size * sizeof(char *))
+                              : yasm_xmalloc(av->size * sizeof(char *));
+    }
+    av->items[av->count] = yasm_xmalloc(len + 1);
+    memcpy(av->items[av->count], text, len);
+    av->items[av->count][len] = '\0';
+    av->items[++av->count] = NULL;
+}
+
+static void
+cpp_argv_add_str(cpp_argv *av, const char *text)
+{
+    cpp_argv_add(av, text, strlen(text));
+}
+
+static void
+cpp_argv_free(cpp_argv *av)
+{
+    size_t i;
+
+    for (i = 0; i < av->count; i++)
+        yasm_xfree(av->items[i]);
+    if (av->items)
+        yasm_xfree(av->items);
+    av->items = NULL;
+    av->count = av->size = 0;
+}
+
 /*
-    Append a string to the command line, ensuring that we don't overflow the
-    buffer.
+    Splits a command such as CPP_PROG or --cpp's into words: blanks separate them, and a quoted part keeps its blanks.
+    No shell reads the command, so $, %, ;, & and the like are ordinary characters.
 */
-#define APPEND(s) do {                              \
-    size_t _len = strlen(s);                        \
-    if (p + _len >= limit)                          \
-        yasm__fatal(N_("command line too long!"));  \
-    strcpy(p, s);                                   \
-    p += _len;                                      \
-} while (0)
+static void
+cpp_split_command(const char *cmd, cpp_argv *words)
+{
+    char *word = yasm_xmalloc(strlen(cmd) + 1), quote;
+    size_t len;
 
-/* Append a string as one quoted argument. */
-#define APPEND_QUOTED(s) do {                       \
-    char *_quoted = cpp_quote(s);                   \
-    APPEND(_quoted);                                \
-    yasm_xfree(_quoted);                            \
-} while (0)
+    for (;;) {
+        while (*cmd == ' ' || *cmd == '\t')
+            cmd++;
+        if (!*cmd)
+            break;
+        len = 0;
+        quote = 0;
+        for (; *cmd && (quote || (*cmd != ' ' && *cmd != '\t')); cmd++) {
+            if (quote && *cmd == quote)
+                quote = 0;
+            else if (!quote && strchr(CPP_QUOTES, *cmd))
+                quote = *cmd;
+            else
+                word[len++] = *cmd;
+        }
+        cpp_argv_add(words, word, len);
+    }
+    yasm_xfree(word);
+}
 
 /*
-    Whether the program, a name or a path len characters long, takes cl's options; only on Windows. 1 for cl and icl,
-    which come as one program per target, 2 for clang-cl and icx, which serve every target; 0 otherwise.
+    Whether the program, a name or a path len characters long, takes cl's options. 1 for cl and icl, which come as one
+    program per target, 2 for clang-cl and icx, which serve every target; 0 otherwise. Outside Windows icx is the
+    gcc-style driver, and clang-cl is the only one of them.
 */
 static int
 cpp_is_ms_program(const char *prog, size_t len)
 {
 #ifdef _WIN32
     static const char *ms_names[] = { "cl", "icl", "clang-cl", "icx-cl", "icx" };
+#else
+    static const char *ms_names[] = { "clang-cl" };
+#endif
     const char *name = prog, *p;
     size_t i, n;
 
@@ -152,259 +221,183 @@ cpp_is_ms_program(const char *prog, size_t len)
         n -= 4;
     for (i = 0; i < NELEMS(ms_names); i++) {
         if (strlen(ms_names[i]) == n && !yasm__strncasecmp(name, ms_names[i], n))
-            return i < 2 ? 1 : 2;
+            return strcmp(ms_names[i], "cl") == 0 || strcmp(ms_names[i], "icl") == 0 ? 1 : 2;
     }
-#else
-    (void)prog;
-    (void)len;
-#endif
     return 0;
 }
 
-/* The program of a command such as CPP_PROG: its first word, or the text of a quoted first word. */
-static const char *
-cpp_command_program(const char *cmd, size_t *len)
-{
-    const char *end;
-
-    if (*cmd == '"' || *cmd == '\'') {
-        end = strchr(cmd + 1, *cmd);
-        if (end) {
-            *len = (size_t)(end - cmd - 1);
-            return cmd + 1;
-        }
-    }
-    *len = strcspn(cmd, " \t");
-    return cmd;
-}
-
-/* The text as one argument for the shell popen runs: in double quotes for cmd, in single quotes for sh. */
-static char *
-cpp_quote(const char *text)
-{
-    char *quoted = yasm_xmalloc(strlen(text) * 4 + 3), *q = quoted;
 #ifdef _WIN32
-    size_t backslashes = 0;
-
-    *q++ = '"';
-    for (; *text; text++) {
-        backslashes = *text == '\\' ? backslashes + 1 : 0;
-        *q++ = *text;
-    }
-    /* Backslashes right before the closing quote would escape it. */
-    while (backslashes--)
-        *q++ = '\\';
-    *q++ = '"';
-#else
-    *q++ = '\'';
-    for (; *text; text++) {
-        if (*text == '\'') {
-            memcpy(q, "'\\''", 4);
-            q += 4;
-        } else
-            *q++ = *text;
-    }
-    *q++ = '\'';
-#endif
-    *q = '\0';
-    return quoted;
-}
-
 /*
-    The command part for a program named by path or name, quoted; its name decides the mode. Except cl and icl, whose
-    target is the program itself, it is told the target of the object format (CPP_GETS_TARGET).
+    The arguments as one command line that the Microsoft C runtime, and the compilers, split back into the same
+    arguments: one with a blank or a quote is put in quotes, with its quotes and the backslashes before them escaped.
 */
 static char *
-cpp_program_command(yasm_preproc_cpp *pp, const char *prog)
+cpp_windows_command_line(char **items)
 {
-    char *quoted, *command;
-    int ms;
+    size_t size = 1, i, backslashes;
+    char *line, *p;
+    const char *s;
 
-#ifdef _WIN32
-    /* cmd expands %NAME% even inside quotes, and a quote cannot be escaped. */
-    if (strpbrk(prog, "\"%"))
-        yasm__fatal(N_("C preprocessor `%s' contains \" or %%"), prog);
-#endif
-    quoted = cpp_quote(prog);
-    ms = cpp_is_ms_program(prog, strlen(prog));
-    if (ms != 1)
-        pp->flags |= CPP_GETS_TARGET;
-    if (ms) {
-        pp->flags |= CPP_HAS_MS_CPP;
-        return quoted;
-    }
-    command = yasm_xmalloc(strlen(quoted) + 4);
-    sprintf(command, "%s -E", quoted);
-    yasm_xfree(quoted);
-    return command;
-}
-
-#ifdef _WIN32
-static int
-cpp_file_exists(const char *path)
-{
-    FILE *f = fopen(path, "rb");
-
-    if (!f)
-        return 0;
-    fclose(f);
-    return 1;
-}
-
-/* dir, if not empty, then name, then ext, when that file exists; NULL otherwise. */
-static char *
-cpp_existing_file(const char *dir, size_t dir_len, const char *name, size_t name_len, const char *ext)
-{
-    char *path = yasm_xmalloc(dir_len + name_len + strlen(ext) + 2), *p = path;
-
-    if (dir_len > 0) {
-        memcpy(p, dir, dir_len);
-        p += dir_len;
-        if (dir[dir_len-1] != '\\' && dir[dir_len-1] != '/')
-            *p++ = '\\';
-    }
-    memcpy(p, name, name_len);
-    strcpy(p + name_len, ext);
-    if (cpp_file_exists(path))
-        return path;
-    yasm_xfree(path);
-    return NULL;
-}
-
-/*
-    The next folder of a PATH list, without its quotes, in *dir and *len; 0 when none is left. Only absolute folders
-    count, never the current directory, and none with " or % in it, which cmd cannot be given in quotes.
-*/
-static int
-cpp_next_path_dir(const char **list, const char **dir, size_t *len)
-{
-    while (**list) {
-        const char *start = *list, *end = strchr(start, ';');
-
-        if (!end)
-            end = start + strlen(start);
-        *list = *end ? end + 1 : end;
-        if (*start == '"' && end - start >= 2 && end[-1] == '"') {
-            start++;
-            end--;
-        }
-        if (end - start < 3 || memchr(start, '"', (size_t)(end - start)) || memchr(start, '%', (size_t)(end - start)))
+    for (i = 0; items[i]; i++)
+        size += strlen(items[i]) * 2 + 3;
+    line = p = yasm_xmalloc(size);
+    for (i = 0; items[i]; i++) {
+        s = items[i];
+        if (i > 0)
+            *p++ = ' ';
+        if (*s && !strpbrk(s, " \t\n\v\"")) {
+            strcpy(p, s);
+            p += strlen(s);
             continue;
-        if ((start[1] == ':' && (start[2] == '\\' || start[2] == '/')) ||
-            ((start[0] == '\\' || start[0] == '/') && (start[1] == '\\' || start[1] == '/'))) {
-            *dir = start;
-            *len = (size_t)(end - start);
-            return 1;
         }
+        *p++ = '"';
+        backslashes = 0;
+        for (; *s; s++) {
+            if (*s == '\\') {
+                backslashes++;
+                continue;
+            }
+            if (*s == '"')
+                backslashes = backslashes * 2 + 1;
+            for (; backslashes > 0; backslashes--)
+                *p++ = '\\';
+            *p++ = *s;
+        }
+        for (backslashes *= 2; backslashes > 0; backslashes--)
+            *p++ = '\\';
+        *p++ = '"';
     }
-    return 0;
+    *p = '\0';
+    if ((size_t)(p - line) >= CMDLINE_SIZE)
+        yasm__fatal(N_("command line too long!"));
+    return line;
 }
 
-/* The program as a path, or a name found in a PATH folder as cmd would run it; NULL if it is not there. */
-static char *
-cpp_find_program(const char *prog, size_t len)
+static int
+cpp_is_file(const char *path)
 {
-    static const char *exts[] = { ".exe", ".com", ".bat", ".cmd" };
-    const char *name = prog, *list = getenv("PATH"), *dir = NULL, *p;
-    size_t dir_len = 0, i;
-    int has_ext;
-    char *path;
+    DWORD attrs = GetFileAttributesA(path);
 
-    for (p = prog; p < prog + len; p++) {
+    return attrs != INVALID_FILE_ATTRIBUTES && !(attrs & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+/*
+    The program's path, .exe added when it has no extension: a path as given, a name as SearchPath finds it in the
+    PATH folders. Searching PATH alone leaves out the current directory, unless PATH names it. NULL if not found.
+*/
+static char *
+cpp_find_program(const char *prog)
+{
+    const char *list = getenv("PATH"), *name = prog, *p;
+    char *found;
+    DWORD size;
+
+    for (p = prog; *p; p++) {
         if (*p == '/' || *p == '\\' || *p == ':')
             name = p + 1;
     }
-    has_ext = memchr(name, '.', (size_t)(prog + len - name)) != NULL;
-    do {
-        if (name == prog && (!list || !cpp_next_path_dir(&list, &dir, &dir_len)))
+    if (name != prog) {
+        found = yasm_xmalloc(strlen(prog) + 5);
+        strcpy(found, prog);
+        if (!strchr(name, '.'))
+            strcat(found, ".exe");
+    } else {
+        if (!list || !*list)
             return NULL;
-        for (i = 0; i < (has_ext ? 1 : NELEMS(exts)); i++) {
-            path = cpp_existing_file(dir, dir_len, prog, len, has_ext ? "" : exts[i]);
-            if (path)
-                return path;
-        }
-    } while (name == prog);
+        size = SearchPathA(list, prog, ".exe", 0, NULL, NULL);
+        if (size == 0)
+            return NULL;
+        found = yasm_xmalloc(size);
+        if (SearchPathA(list, prog, ".exe", size, found, NULL) == 0)
+            found[0] = '\0';
+    }
+    if (cpp_is_file(found))
+        return found;
+    yasm_xfree(found);
     return NULL;
 }
 
-/* The first cl, clang-cl, icx-cl, icx, icl, clang, gcc or cpp in the PATH folders, in PATH order; NULL if none. */
+/* The first of the Visual Studio compilers, which all preprocess for Windows, that PATH has; NULL if none. */
 static char *
 cpp_search_path(void)
 {
-    static const char *names[] = { "cl", "clang-cl", "icx-cl", "icx", "icl", "clang", "gcc", "cpp" };
-    const char *list = getenv("PATH"), *dir;
-    size_t len, i;
+    static const char *names[] = { "cl", "clang-cl", "icx-cl", "icx", "icl" };
+    size_t i;
     char *path;
 
-    if (!list)
-        return NULL;
-    while (cpp_next_path_dir(&list, &dir, &len)) {
-        for (i = 0; i < NELEMS(names); i++) {
-            path = cpp_existing_file(dir, len, names[i], strlen(names[i]), ".exe");
-            if (path)
-                return path;
-        }
+    for (i = 0; i < NELEMS(names); i++) {
+        path = cpp_find_program(names[i]);
+        if (path)
+            return path;
     }
     return NULL;
 }
+
+/*
+    Makes the command the compiler the PATH search found. Except cl and icl, whose target is the program itself, it is
+    told the target of the object format (CPP_GETS_TARGET).
+*/
+static void
+cpp_use_found(yasm_preproc_cpp *pp, char *path)
+{
+    pp->flags |= CPP_HAS_MS_CPP;
+    if (cpp_is_ms_program(path, strlen(path)) != 1)
+        pp->flags |= CPP_GETS_TARGET;
+    cpp_argv_add_str(&pp->command, path);
+    yasm_xfree(path);
+}
+
+/* Whether the program is a batch file, which Windows runs through cmd, and cmd would read its arguments as commands. */
+static int
+cpp_is_batch_file(const char *path)
+{
+    size_t len = strlen(path);
+
+    return len > 4 && (!yasm__strcasecmp(path + len - 4, ".bat") || !yasm__strcasecmp(path + len - 4, ".cmd"));
+}
 #endif
 
-/* The preprocessor --cpp names, else CPP_PROG as it is; on Windows, if CPP_PROG is not there, one found on PATH. */
-static char *
+/*
+    The command -r cpp runs, as words: --cpp's, else CPP_PROG's. On Windows its program is run by the path found, a
+    name looked up in the PATH folders; if CPP_PROG's program is not there, for a win32 or win64 object the first
+    Visual Studio compiler on PATH is run instead.
+*/
+static void
 cpp_choose_command(yasm_preproc_cpp *pp)
 {
-    const char *prog = yasm_get_cpp_program(), *cpp_prog = CPP_PROG;
-    size_t len;
+    const char *cmd = yasm_get_cpp_command();
 #ifdef _WIN32
-    char *found, *command;
+    char *found;
 #endif
 
-    if (prog) {
-        if (!*prog)
-            yasm__fatal(N_("--cpp needs a program"));
+    cpp_split_command(cmd ? cmd : CPP_PROG, &pp->command);
 #ifdef _WIN32
-        /* A bare name is looked up here: cmd would run one in the current directory first. */
-        if (!strpbrk(prog, "/\\:")) {
-            found = cpp_find_program(prog, strlen(prog));
-            if (!found)
-                yasm__fatal(N_("C preprocessor `%s' is not in any PATH folder"), prog);
-            command = cpp_program_command(pp, found);
-            yasm_xfree(found);
-            return command;
-        }
-#endif
-        return cpp_program_command(pp, prog);
-    }
-    prog = cpp_command_program(cpp_prog, &len);
-#ifdef _WIN32
-    found = cpp_find_program(prog, len);
-    if (!found) {
+    found = pp->command.count ? cpp_find_program(pp->command.items[0]) : NULL;
+    if (found) {
+        yasm_xfree(pp->command.items[0]);
+        pp->command.items[0] = found;
+    } else if (!cmd) {
+        /* The compilers on PATH preprocess for Windows: their macros would be wrong for an ELF or Mach-O object. */
+        if (!pp->objfmt || (strcmp(pp->objfmt, "win32") != 0 && strcmp(pp->objfmt, "win64") != 0 &&
+                            strcmp(pp->objfmt, "x64") != 0))
+            yasm__fatal(N_("no C preprocessor: `%s' is not there, and PATH is searched only for win32 and win64 "
+                           "objects; name one with --cpp"), CPP_PROG);
+        cpp_argv_free(&pp->command);
         found = cpp_search_path();
         if (!found)
-            yasm__fatal(N_("no C preprocessor: `%s' is not there and PATH has no cl, clang-cl, icx-cl, icx, icl, "
-                           "clang, gcc or cpp; name one with --cpp"), CPP_PROG);
-        command = cpp_program_command(pp, found);
-        yasm_xfree(found);
-        return command;
-    }
+            yasm__fatal(N_("no C preprocessor: `%s' is not there and PATH has no cl, clang-cl, icx-cl, icx or icl; "
+                           "name one with --cpp"), CPP_PROG);
+        cpp_use_found(pp, found);
+        return;
+    } else if (pp->command.count)
+        yasm__fatal(N_("C preprocessor `%s' not found"), pp->command.items[0]);
+    if (found && cpp_is_batch_file(found))
+        yasm__fatal(N_("C preprocessor `%s' is a batch file"), found);
 #endif
-    if (cpp_is_ms_program(prog, len))
+    if (pp->command.count == 0)
+        yasm__fatal(N_("no C preprocessor command in `%s'"), cmd ? cmd : CPP_PROG);
+    if (cpp_is_ms_program(pp->command.items[0], strlen(pp->command.items[0])))
         pp->flags |= CPP_HAS_MS_CPP;
-#ifdef _WIN32
-    {
-        /* CPP_PROG's program by the path found, then its arguments: cmd would look in the current directory first. */
-        const char *args = prog + len + (prog != cpp_prog ? 1 : 0);
-        char *quoted = cpp_quote(found);
-
-        command = yasm_xmalloc(strlen(quoted) + strlen(args) + 1);
-        sprintf(command, "%s%s", quoted, args);
-        yasm_xfree(quoted);
-        yasm_xfree(found);
-        return command;
-    }
-#else
-    return yasm__xstrdup(CPP_PROG);
-#endif
 }
 
 /* Reads a whole line of any length into *buf, growing it; returns 0 at the end of the file. */
@@ -681,25 +674,39 @@ cpp_ms_flatten_input(yasm_preproc_cpp *pp, FILE *out)
 static char *
 cpp_ms_prepare_input(yasm_preproc_cpp *pp)
 {
-    const char *dir = getenv("TMP");
     char *path;
     FILE *out = NULL;
-#ifdef _WIN32
     unsigned int n;
-#endif
+    int fd;
+#ifdef _WIN32
+    const char *dir = getenv("TMP");
 
     if (!dir || !*dir)
         dir = getenv("TEMP");
     if (!dir || !*dir)
         dir = ".";
-    path = yasm_xmalloc(strlen(dir) + 48);
-#ifdef _WIN32
-    /* .S: clang-cl and icx ignore an .asm or .s input, and preprocess .S as assembler. */
-    for (n = 0; n < 1000 && !out; n++) {
-        sprintf(path, "%s\\yasm-%d-%u.S", dir, _getpid(), n);
-        out = fopen(path, "wx");
-    }
+#else
+    const char *dir = getenv("TMPDIR");
+
+    if (!dir || !*dir)
+        dir = "/tmp";
 #endif
+    path = yasm_xmalloc(strlen(dir) + 48);
+    /* .S: clang-cl and icx ignore an .asm or .s input, and preprocess .S as assembler. fopen's "wx" is missing from
+       msvcrt.dll, which MinGW builds use. */
+    for (n = 0; n < 1000 && !out; n++) {
+#ifdef _WIN32
+        sprintf(path, "%s\\yasm-%d-%u.S", dir, _getpid(), n);
+        fd = _open(path, _O_WRONLY | _O_CREAT | _O_EXCL | _O_TEXT, _S_IREAD | _S_IWRITE);
+        if (fd >= 0)
+            out = _fdopen(fd, "w");
+#else
+        sprintf(path, "%s/yasm-%d-%u.S", dir, (int)getpid(), n);
+        fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (fd >= 0)
+            out = fdopen(fd, "w");
+#endif
+    }
     if (!out)
         yasm__fatal(N_("could not create a temporary file for the preprocessor"));
 
@@ -709,95 +716,156 @@ cpp_ms_prepare_input(yasm_preproc_cpp *pp)
     return path;
 }
 
-/*
-    Put all the options together into a command line that can be used to invoke
-    cpp.
-*/
-static char *
-cpp_build_cmdline(yasm_preproc_cpp *pp, const char *extra, const char *input)
+/* The arguments of one run: the command, the target, the -I, -D, -U and -include options, extra, then the input. */
+static void
+cpp_build_argv(yasm_preproc_cpp *pp, const char *extra, const char *input, cpp_argv *av)
 {
-    char *cmdline, *p, *limit;
     cpp_arg_entry *arg;
-    size_t cpp_len = strlen(pp->command);
+    size_t i;
 
-    /* Initialize command line. */
-    cmdline = p = yasm_xmalloc(cpp_len +CMDLINE_SIZE);
-    limit = p + CMDLINE_SIZE;
-#ifdef _WIN32
-    /* popen runs cmd /c, which drops the first and the last quote of a line that starts with one */
-    *p++ = '"';
-#endif
-    strcpy(p, pp->command);
-    p += cpp_len;
+    for (i = 0; i < pp->command.count; i++)
+        cpp_argv_add_str(av, pp->command.items[i]);
 
-    if ((pp->flags & CPP_GETS_TARGET) && pp->objfmt) {
-        if (!strcmp(pp->objfmt, "win32") || !strcmp(pp->objfmt, "coff") || !strcmp(pp->objfmt, "elf32") ||
-            !strcmp(pp->objfmt, "macho32"))
-            APPEND(" -m32");
-        else if (!strcmp(pp->objfmt, "win64") || !strcmp(pp->objfmt, "x64") || !strcmp(pp->objfmt, "elf64") ||
-                 !strcmp(pp->objfmt, "macho64"))
-            APPEND(" -m64");
-        else if (!strcmp(pp->objfmt, "elfx32"))
-            APPEND(" -mx32");
-    }
+    if (pp->flags & CPP_GETS_TARGET)
+        cpp_argv_add_str(av, strcmp(pp->objfmt, "win32") == 0 ? "-m32" : "-m64");
 
-    arg = TAILQ_FIRST(&pp->cpp_args);
-
-    /* Append arguments from the list; the paths quoted, the macros as they were given. -P files are already in the
-       input of an MS preprocessor. */
-    while ( arg ) {
+    /* -P files are already in the input of an MS preprocessor. */
+    TAILQ_FOREACH(arg, &pp->cpp_args, entry) {
         if (!(pp->flags & CPP_HAS_MS_CPP) || strcmp(arg->op, "-include") != 0) {
-            APPEND(" ");
-            APPEND(arg->op);
-            APPEND(" ");
-            if (strcmp(arg->op, "-D") == 0 || strcmp(arg->op, "-U") == 0)
-                APPEND(arg->param);
-            else
-                APPEND_QUOTED(arg->param);
+            cpp_argv_add_str(av, arg->op);
+            cpp_argv_add_str(av, arg->param);
         }
-
-        arg = TAILQ_NEXT(arg, entry);
     }
 
-    /* Append extra arguments. */
-    if (extra) {
-        APPEND(" ");
-        APPEND(extra);
+    if (extra)
+        cpp_argv_add_str(av, extra);
+    if (pp->flags & CPP_HAS_MS_CPP) {
+        cpp_argv_add_str(av, "/nologo");
+        cpp_argv_add_str(av, "/E");
+    } else {
+        cpp_argv_add_str(av, "-x");
+        cpp_argv_add_str(av, "assembler-with-cpp");
     }
-    /* Append final arguments. */
-    if (pp->flags & CPP_HAS_MS_CPP)
-        APPEND(" /nologo /E ");
-    else
-        APPEND(" -x assembler-with-cpp ");
-    APPEND_QUOTED(input);
+    cpp_argv_add_str(av, input);
+}
+
 #ifdef _WIN32
-    APPEND("\"");
+/* An inheritable copy of a standard handle for the preprocessor, or NULL if there is none. */
+static HANDLE
+cpp_inheritable(HANDLE h)
+{
+    HANDLE self = GetCurrentProcess(), copy;
+
+    if (h == NULL || h == INVALID_HANDLE_VALUE || !DuplicateHandle(self, h, self, &copy, 0, TRUE, DUPLICATE_SAME_ACCESS))
+        return NULL;
+    return copy;
+}
 #endif
 
-    return cmdline;
+/*
+    Starts the preprocessor with the arguments, its program first, and returns its standard output to read. No shell
+    runs in between: every argument reaches the program exactly as it is.
+*/
+static FILE *
+cpp_start(cpp_argv *av, cpp_process *process)
+{
+#ifdef _WIN32
+    SECURITY_ATTRIBUTES sa;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    HANDLE rd, wr;
+    char *line = cpp_windows_command_line(av->items);
+    BOOL started;
+
+    sa.nLength = sizeof(sa);
+    sa.lpSecurityDescriptor = NULL;
+    sa.bInheritHandle = TRUE;
+    if (!CreatePipe(&rd, &wr, &sa, 0))
+        yasm__fatal(N_("Failed to execute preprocessor"));
+    SetHandleInformation(rd, HANDLE_FLAG_INHERIT, 0);
+    memset(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdInput = cpp_inheritable(GetStdHandle(STD_INPUT_HANDLE));
+    si.hStdOutput = wr;
+    si.hStdError = cpp_inheritable(GetStdHandle(STD_ERROR_HANDLE));
+    started = CreateProcessA(av->items[0], line, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
+    CloseHandle(wr);
+    if (si.hStdInput)
+        CloseHandle(si.hStdInput);
+    if (si.hStdError)
+        CloseHandle(si.hStdError);
+    yasm_xfree(line);
+    if (!started) {
+        CloseHandle(rd);
+        yasm__fatal(N_("Failed to execute preprocessor"));
+    }
+    CloseHandle(pi.hThread);
+    *process = pi.hProcess;
+    return _fdopen(_open_osfhandle((intptr_t)rd, _O_RDONLY), "r");
+#else
+    int fds[2];
+    pid_t pid;
+
+    if (pipe(fds) != 0)
+        yasm__fatal(N_("Failed to execute preprocessor"));
+    pid = fork();
+    if (pid < 0)
+        yasm__fatal(N_("Failed to execute preprocessor"));
+    if (pid == 0) {
+        dup2(fds[1], STDOUT_FILENO);
+        close(fds[0]);
+        close(fds[1]);
+        execvp(av->items[0], av->items);
+        fprintf(stderr, "yasm: cannot run `%s': %s\n", av->items[0], strerror(errno));
+        _exit(127);
+    }
+    close(fds[1]);
+    *process = pid;
+    return fdopen(fds[0], "r");
+#endif
+}
+
+/* Closes the preprocessor's output and waits for it to end; returns whether it failed. */
+static int
+cpp_finish(FILE *f, cpp_process process)
+{
+#ifdef _WIN32
+    DWORD code = 1;
+
+    fclose(f);
+    WaitForSingleObject(process, INFINITE);
+    if (!GetExitCodeProcess(process, &code))
+        code = 1;
+    CloseHandle(process);
+    return code != 0;
+#else
+    int status;
+
+    fclose(f);
+    while (waitpid(process, &status, 0) < 0) {
+        if (errno != EINTR)
+            return 1;
+    }
+    return !WIFEXITED(status) || WEXITSTATUS(status) != 0;
+#endif
 }
 
 /* Invoke the c preprocessor. */
 static void
 cpp_invoke(yasm_preproc_cpp *pp)
 {
-    char *cmdline;
+    cpp_argv av = { NULL, 0, 0 };
 
     if (pp->flags & CPP_HAS_MS_CPP) {
         pp->ms_input = cpp_ms_prepare_input(pp);
-        cmdline = cpp_build_cmdline(pp, NULL, pp->ms_input);
+        cpp_build_argv(pp, NULL, pp->ms_input, &av);
     } else
-        cmdline = cpp_build_cmdline(pp, NULL, pp->filename);
-
-#ifdef HAVE_POPEN
-    pp->f = popen(cmdline, "r");
+        cpp_build_argv(pp, NULL, pp->filename, &av);
+    pp->f = cpp_start(&av, &pp->process);
+    cpp_argv_free(&av);
     if (!pp->f)
-        yasm__fatal( N_("Failed to execute preprocessor") );
-#else
-    yasm__fatal( N_("Cannot execute preprocessor, no popen available") );
-#endif
-
-    yasm_xfree(cmdline);
+        yasm__fatal(N_("Failed to execute preprocessor"));
 }
 
 /* Free memory used by the list of arguments. */
@@ -817,19 +885,13 @@ cpp_destroy_args(yasm_preproc_cpp *pp)
 static void
 cpp_generate_deps(yasm_preproc_cpp *pp)
 {
-    char *cmdline;
+    cpp_argv av = { NULL, 0, 0 };
 
-    cmdline = cpp_build_cmdline(pp, "-M", pp->filename);
-
-#ifdef HAVE_POPEN
-    pp->f_deps = popen(cmdline, "r");
+    cpp_build_argv(pp, "-M", pp->filename, &av);
+    pp->f_deps = cpp_start(&av, &pp->deps_process);
+    cpp_argv_free(&av);
     if (!pp->f_deps)
-        yasm__fatal( N_("Failed to execute preprocessor") );
-#else
-    yasm__fatal( N_("Cannot execute preprocessor, no popen available") );
-#endif
-
-    yasm_xfree(cmdline);
+        yasm__fatal(N_("Failed to execute preprocessor"));
 }
 
 static int
@@ -890,9 +952,7 @@ cpp_read_deps(yasm_preproc_cpp *pp)
         }
     }
     text[len] = '\0';
-#ifdef HAVE_POPEN
-    failed = pclose(pp->f_deps) != 0;
-#endif
+    failed = cpp_finish(pp->f_deps, pp->deps_process);
     pp->f_deps = NULL;
     pp->deps_text = text;
     if (failed)
@@ -947,7 +1007,8 @@ cpp_preproc_create(const char *in, yasm_symtab *symtab, yasm_linemap *lm,
     pp->cur_lm = lm;
     pp->errwarns = errwarns;
     pp->flags = 0;
-    pp->command = cpp_choose_command(pp);
+    pp->command.items = NULL;
+    pp->command.count = pp->command.size = 0;
     pp->filename = yasm__xstrdup(in);
     pp->ms_input = NULL;
     pp->ms_once = NULL;
@@ -978,11 +1039,8 @@ cpp_preproc_destroy(yasm_preproc *preproc)
 
     int failed = 0;
 
-    if (pp->f) {
-#ifdef HAVE_POPEN
-        failed = pclose(pp->f) != 0;
-#endif
-    }
+    if (pp->f)
+        failed = cpp_finish(pp->f, pp->process);
     if (pp->ms_input) {
         remove(pp->ms_input);
         yasm_xfree(pp->ms_input);
@@ -999,7 +1057,7 @@ cpp_preproc_destroy(yasm_preproc *preproc)
         yasm_xfree(pp->deps_text);
     if (pp->objfmt)
         yasm_xfree(pp->objfmt);
-    yasm_xfree(pp->command);
+    cpp_argv_free(&pp->command);
     yasm_xfree(pp->filename);
     yasm_xfree(pp);
 }
@@ -1013,6 +1071,8 @@ cpp_preproc_get_line(yasm_preproc *preproc)
 
     if (! (pp->flags & CPP_HAS_BEEN_INVOKED) ) {
         pp->flags |= CPP_HAS_BEEN_INVOKED;
+        if (pp->command.count == 0)
+            cpp_choose_command(pp);
 
         cpp_invoke(pp);
     }
@@ -1073,6 +1133,8 @@ cpp_preproc_get_included_file(yasm_preproc *preproc, char *buf,
 {
     yasm_preproc_cpp *pp = (yasm_preproc_cpp *)preproc;
 
+    if (pp->command.count == 0)
+        cpp_choose_command(pp);
     if (pp->flags & CPP_HAS_MS_CPP)
         return cpp_ms_get_included_file(pp, buf, max_size);
 

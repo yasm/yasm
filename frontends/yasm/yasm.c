@@ -172,7 +172,7 @@ static opt_option options[] =
     { 'r', "preproc", 1, opt_preproc_handler, 0,
       N_("select preprocessor (list with -r help)"), N_("preproc") },
     { 0, "cpp", 1, opt_cpp_handler, 0,
-      N_("C preprocessor program that -r cpp runs"), N_("program") },
+      N_("C preprocessor command that -r cpp runs"), N_("command") },
     { 'f', "oformat", 1, opt_objfmt_handler, 0,
       N_("select object format (list with -f help)"), N_("format") },
     { 'g', "dformat", 1, opt_dbgfmt_handler, 0,
@@ -708,7 +708,7 @@ do_assemble(void)
     yasm_errwarns_destroy(errwarns);
     cleanup(object);
     yasm_delete_include_paths();
-    yasm_set_cpp_program(NULL);
+    yasm_set_cpp_command(NULL);
     return EXIT_SUCCESS;
 }
 
@@ -1059,7 +1059,7 @@ static int
 opt_cpp_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
 {
     assert(param != NULL);
-    yasm_set_cpp_program(param);
+    yasm_set_cpp_command(param);
     return 0;
 }
 

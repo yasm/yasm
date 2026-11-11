@@ -241,18 +241,19 @@ const char * yasm_get_include_dir(void **iter);
 YASM_LIB_DECL
 void yasm_add_include_path(const char *path);
 
-/** Set the C preprocessor program the cpp preprocessor runs instead of its
+/** Set the C preprocessor command the cpp preprocessor runs instead of its
  * default.
- * \param program   name or path of the program, or NULL for the default
+ * \param command   the program with the options it needs, or NULL for the
+ *                  default
  */
 YASM_LIB_DECL
-void yasm_set_cpp_program(/*@null@*/ const char *program);
+void yasm_set_cpp_command(/*@null@*/ const char *command);
 
-/** Get the C preprocessor program set by yasm_set_cpp_program().
- * \return The program, or NULL if none is set.
+/** Get the C preprocessor command set by yasm_set_cpp_command().
+ * \return The command, or NULL if none is set.
  */
 YASM_LIB_DECL
-/*@null@*/ const char *yasm_get_cpp_program(void);
+/*@null@*/ const char *yasm_get_cpp_command(void);
 
 /** Write an 8-bit value to a buffer, incrementing buffer pointer.
  * \note Only works properly if ptr is an (unsigned char *).

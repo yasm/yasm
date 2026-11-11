@@ -159,31 +159,44 @@ as
 \fIpreproc\fR\&.
 .RE
 .PP
-\fB\-\-cpp=\fR\fB\fIprogram\fR\fR: Select the C preprocessor
+\fB\-\-cpp=\fR\fB\fIcommand\fR\fR: Select the C preprocessor
 .RS 4
-Names the C preprocessor that the
+The command that the
 \(lqcpp\(rq
-preprocessor (\fB\-r cpp\fR) runs, as a program name looked up on
+preprocessor (\fB\-r cpp\fR) runs instead of the one Yasm was built with: a program with the options it needs to preprocess, such as
+\fB\-\-cpp="gcc \-E"\fR
+or
+\fB\-\-cpp=cl\fR\&. Yasm adds the include paths, the macro definitions and the input file\&. On Windows, a program named
+\(lqcl\(rq,
+\(lqclang\-cl\(rq,
+\(lqicx\-cl\(rq,
+\(lqicx\(rq
+or
+\(lqicl\(rq
+is run with cl\(aqs options, and a program given without a folder is looked up in the
 \fIPATH\fR
-or as a path\&. On Windows,
+folders; elsewhere
+\(lqclang\-cl\(rq
+is run with cl\(aqs options\&.
+.sp
+The command is split into words at blanks; a part in double quotes, or outside Windows also in single quotes, keeps its blanks, as a program path with spaces needs\&. No shell runs the command: the program gets each option and file name exactly as it is\&. This option runs whatever program it names, so a tool that passes options it does not trust to Yasm must not pass this one\&.
+.sp
+Without this option, on Windows, if the C preprocessor Yasm was built with cannot be found and the object format is
+\(lqwin32\(rq
+or
+\(lqwin64\(rq, Yasm runs the first of the Visual Studio compilers
 \(lqcl\(rq,
 \(lqclang\-cl\(rq,
 \(lqicx\-cl\(rq,
 \(lqicx\(rq
 and
 \(lqicl\(rq
-are run with cl\(aqs options; any other program is run with
-\fB\-E\fR\&. Except cl and icl, which come as one program per target, the program is also given
+that is on
+\fIPATH\fR, and gives it the options it needs, including
 \fB\-m32\fR
 or
 \fB\-m64\fR
-as the object format requires\&. Without this option, Yasm runs the C preprocessor it was built with; on Windows, if that one cannot be found, Yasm runs the first of the programs above, then
-\(lqclang\(rq,
-\(lqgcc\(rq
-and
-\(lqcpp\(rq, that it finds in a
-\fIPATH\fR
-folder, the folders taken in order\&.
+as the object format requires (cl and icl come as one program per target)\&.
 .RE
 .PP
 \fB\-h\fR or \fB\-\-help\fR: Print a summary of options
