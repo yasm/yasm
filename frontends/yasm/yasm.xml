@@ -278,6 +278,29 @@
     </varlistentry>
 
     <varlistentry>
+     <term><option>--cpp=<replaceable>program</replaceable></option>:
+      Select the C preprocessor</term>
+
+     <listitem>
+      <para>Names the C preprocessor that the <quote>cpp</quote>
+       preprocessor (<option>-r cpp</option>) runs, as a program name
+       looked up on <envar>PATH</envar> or as a path.  On Windows,
+       <quote>cl</quote>, <quote>clang-cl</quote>,
+       <quote>icx-cl</quote>, <quote>icx</quote> and <quote>icl</quote>
+       are run with cl's options; any other program is run with
+       <option>-E</option>.  Except cl and icl, which come as one
+       program per target, the program is also given
+       <option>-m32</option> or <option>-m64</option> as the object
+       format requires.  Without this option, Yasm runs the C
+       preprocessor it was built with; on Windows, if that one cannot
+       be found, Yasm runs the first of the programs above, then
+       <quote>clang</quote>, <quote>gcc</quote> and <quote>cpp</quote>,
+       that it finds in a <envar>PATH</envar> folder, the folders taken
+       in order.</para>
+     </listitem>
+    </varlistentry>
+
+    <varlistentry>
      <term><option>-h</option> or <option>--help</option>: Print a
       summary of options</term>
 

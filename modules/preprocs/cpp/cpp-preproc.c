@@ -37,8 +37,6 @@
 
 #define BSIZE 512
 
-#define CL_EXE "cl.exe"
-
 #if !defined(HAVE_POPEN) && defined(_WIN32)
 #define popen _popen
 #define pclose _pclose
@@ -77,6 +75,9 @@ typedef struct yasm_preproc_cpp {
     /* List of arguments to pass to cpp. */
     TAILQ_HEAD(cpp_arg_head, cpp_arg_entry) cpp_args;
 
+    /* The preprocessor's part of every command line: the program, and for --cpp in gcc mode its -E. */
+    char *command;
+
     char *filename;
     FILE *f, *f_deps;
     yasm_linemap *cur_lm;
@@ -90,12 +91,20 @@ typedef struct yasm_preproc_cpp {
 
     /* The files cpp_ms_flatten inlined, for the dependency list, and the next one to report. */
     cpp_path_entry *ms_deps, *ms_dep_next;
+
+    /* The whole -M output of a gcc-style preprocessor, and the next file in it to report. */
+    char *deps_text;
+    const char *deps_next;
+
+    /* The object format (-f), from the __YASM_OBJFMT__ builtin; NULL until the frontend defines it. */
+    char *objfmt;
 } yasm_preproc_cpp;
 
 /* Flag values for yasm_preproc_cpp->flags. */
 #define CPP_HAS_BEEN_INVOKED        0x01
 #define CPP_HAS_GENERATED_DEPS      0x02
 #define CPP_HAS_MS_CPP              0x04 /* use MS compiler for cpp */
+#define CPP_GETS_TARGET             0x08 /* pass -m32 or -m64 as the object format says */
 
 #define CPP_MAX_INCLUDE_DEPTH       64
 
@@ -115,18 +124,287 @@ typedef struct yasm_preproc_cpp {
     p += _len;                                      \
 } while (0)
 
-static int
-cpp_is_ms_cl(void)
-{
-    size_t cpp_len = strlen(CPP_PROG), cl_len = strlen(CL_EXE);
-    int cpp_prog_quoted;
+/* Append a string as one quoted argument. */
+#define APPEND_QUOTED(s) do {                       \
+    char *_quoted = cpp_quote(s);                   \
+    APPEND(_quoted);                                \
+    yasm_xfree(_quoted);                            \
+} while (0)
 
-    if (cpp_len == 0)
+/*
+    Whether the program, a name or a path len characters long, takes cl's options; only on Windows. 1 for cl and icl,
+    which come as one program per target, 2 for clang-cl and icx, which serve every target; 0 otherwise.
+*/
+static int
+cpp_is_ms_program(const char *prog, size_t len)
+{
+#ifdef _WIN32
+    static const char *ms_names[] = { "cl", "icl", "clang-cl", "icx-cl", "icx" };
+    const char *name = prog, *p;
+    size_t i, n;
+
+    for (p = prog; p < prog + len; p++) {
+        if (*p == '/' || *p == '\\' || *p == ':')
+            name = p + 1;
+    }
+    n = (size_t)(prog + len - name);
+    if (n > 4 && !yasm__strncasecmp(name + n - 4, ".exe", 4))
+        n -= 4;
+    for (i = 0; i < NELEMS(ms_names); i++) {
+        if (strlen(ms_names[i]) == n && !yasm__strncasecmp(name, ms_names[i], n))
+            return i < 2 ? 1 : 2;
+    }
+#else
+    (void)prog;
+    (void)len;
+#endif
+    return 0;
+}
+
+/* The program of a command such as CPP_PROG: its first word, or the text of a quoted first word. */
+static const char *
+cpp_command_program(const char *cmd, size_t *len)
+{
+    const char *end;
+
+    if (*cmd == '"' || *cmd == '\'') {
+        end = strchr(cmd + 1, *cmd);
+        if (end) {
+            *len = (size_t)(end - cmd - 1);
+            return cmd + 1;
+        }
+    }
+    *len = strcspn(cmd, " \t");
+    return cmd;
+}
+
+/* The text as one argument for the shell popen runs: in double quotes for cmd, in single quotes for sh. */
+static char *
+cpp_quote(const char *text)
+{
+    char *quoted = yasm_xmalloc(strlen(text) * 4 + 3), *q = quoted;
+#ifdef _WIN32
+    size_t backslashes = 0;
+
+    *q++ = '"';
+    for (; *text; text++) {
+        backslashes = *text == '\\' ? backslashes + 1 : 0;
+        *q++ = *text;
+    }
+    /* Backslashes right before the closing quote would escape it. */
+    while (backslashes--)
+        *q++ = '\\';
+    *q++ = '"';
+#else
+    *q++ = '\'';
+    for (; *text; text++) {
+        if (*text == '\'') {
+            memcpy(q, "'\\''", 4);
+            q += 4;
+        } else
+            *q++ = *text;
+    }
+    *q++ = '\'';
+#endif
+    *q = '\0';
+    return quoted;
+}
+
+/*
+    The command part for a program named by path or name, quoted; its name decides the mode. Except cl and icl, whose
+    target is the program itself, it is told the target of the object format (CPP_GETS_TARGET).
+*/
+static char *
+cpp_program_command(yasm_preproc_cpp *pp, const char *prog)
+{
+    char *quoted, *command;
+    int ms;
+
+#ifdef _WIN32
+    /* cmd expands %NAME% even inside quotes, and a quote cannot be escaped. */
+    if (strpbrk(prog, "\"%"))
+        yasm__fatal(N_("C preprocessor `%s' contains \" or %%"), prog);
+#endif
+    quoted = cpp_quote(prog);
+    ms = cpp_is_ms_program(prog, strlen(prog));
+    if (ms != 1)
+        pp->flags |= CPP_GETS_TARGET;
+    if (ms) {
+        pp->flags |= CPP_HAS_MS_CPP;
+        return quoted;
+    }
+    command = yasm_xmalloc(strlen(quoted) + 4);
+    sprintf(command, "%s -E", quoted);
+    yasm_xfree(quoted);
+    return command;
+}
+
+#ifdef _WIN32
+static int
+cpp_file_exists(const char *path)
+{
+    FILE *f = fopen(path, "rb");
+
+    if (!f)
         return 0;
-    cpp_prog_quoted = (CPP_PROG[cpp_len-1] == '\"' || CPP_PROG[cpp_len-1] == '\'') ? 1 : 0;
-    return !yasm__strcasecmp(CPP_PROG, "cl") ||
-        (cpp_len >= cl_len + cpp_prog_quoted &&
-         !yasm__strncasecmp(CPP_PROG + cpp_len - cl_len - cpp_prog_quoted, CL_EXE, cl_len));
+    fclose(f);
+    return 1;
+}
+
+/* dir, if not empty, then name, then ext, when that file exists; NULL otherwise. */
+static char *
+cpp_existing_file(const char *dir, size_t dir_len, const char *name, size_t name_len, const char *ext)
+{
+    char *path = yasm_xmalloc(dir_len + name_len + strlen(ext) + 2), *p = path;
+
+    if (dir_len > 0) {
+        memcpy(p, dir, dir_len);
+        p += dir_len;
+        if (dir[dir_len-1] != '\\' && dir[dir_len-1] != '/')
+            *p++ = '\\';
+    }
+    memcpy(p, name, name_len);
+    strcpy(p + name_len, ext);
+    if (cpp_file_exists(path))
+        return path;
+    yasm_xfree(path);
+    return NULL;
+}
+
+/*
+    The next folder of a PATH list, without its quotes, in *dir and *len; 0 when none is left. Only absolute folders
+    count, never the current directory, and none with " or % in it, which cmd cannot be given in quotes.
+*/
+static int
+cpp_next_path_dir(const char **list, const char **dir, size_t *len)
+{
+    while (**list) {
+        const char *start = *list, *end = strchr(start, ';');
+
+        if (!end)
+            end = start + strlen(start);
+        *list = *end ? end + 1 : end;
+        if (*start == '"' && end - start >= 2 && end[-1] == '"') {
+            start++;
+            end--;
+        }
+        if (end - start < 3 || memchr(start, '"', (size_t)(end - start)) || memchr(start, '%', (size_t)(end - start)))
+            continue;
+        if ((start[1] == ':' && (start[2] == '\\' || start[2] == '/')) ||
+            ((start[0] == '\\' || start[0] == '/') && (start[1] == '\\' || start[1] == '/'))) {
+            *dir = start;
+            *len = (size_t)(end - start);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* The program as a path, or a name found in a PATH folder as cmd would run it; NULL if it is not there. */
+static char *
+cpp_find_program(const char *prog, size_t len)
+{
+    static const char *exts[] = { ".exe", ".com", ".bat", ".cmd" };
+    const char *name = prog, *list = getenv("PATH"), *dir = NULL, *p;
+    size_t dir_len = 0, i;
+    int has_ext;
+    char *path;
+
+    for (p = prog; p < prog + len; p++) {
+        if (*p == '/' || *p == '\\' || *p == ':')
+            name = p + 1;
+    }
+    has_ext = memchr(name, '.', (size_t)(prog + len - name)) != NULL;
+    do {
+        if (name == prog && (!list || !cpp_next_path_dir(&list, &dir, &dir_len)))
+            return NULL;
+        for (i = 0; i < (has_ext ? 1 : NELEMS(exts)); i++) {
+            path = cpp_existing_file(dir, dir_len, prog, len, has_ext ? "" : exts[i]);
+            if (path)
+                return path;
+        }
+    } while (name == prog);
+    return NULL;
+}
+
+/* The first cl, clang-cl, icx-cl, icx, icl, clang, gcc or cpp in the PATH folders, in PATH order; NULL if none. */
+static char *
+cpp_search_path(void)
+{
+    static const char *names[] = { "cl", "clang-cl", "icx-cl", "icx", "icl", "clang", "gcc", "cpp" };
+    const char *list = getenv("PATH"), *dir;
+    size_t len, i;
+    char *path;
+
+    if (!list)
+        return NULL;
+    while (cpp_next_path_dir(&list, &dir, &len)) {
+        for (i = 0; i < NELEMS(names); i++) {
+            path = cpp_existing_file(dir, len, names[i], strlen(names[i]), ".exe");
+            if (path)
+                return path;
+        }
+    }
+    return NULL;
+}
+#endif
+
+/* The preprocessor --cpp names, else CPP_PROG as it is; on Windows, if CPP_PROG is not there, one found on PATH. */
+static char *
+cpp_choose_command(yasm_preproc_cpp *pp)
+{
+    const char *prog = yasm_get_cpp_program(), *cpp_prog = CPP_PROG;
+    size_t len;
+#ifdef _WIN32
+    char *found, *command;
+#endif
+
+    if (prog) {
+        if (!*prog)
+            yasm__fatal(N_("--cpp needs a program"));
+#ifdef _WIN32
+        /* A bare name is looked up here: cmd would run one in the current directory first. */
+        if (!strpbrk(prog, "/\\:")) {
+            found = cpp_find_program(prog, strlen(prog));
+            if (!found)
+                yasm__fatal(N_("C preprocessor `%s' is not in any PATH folder"), prog);
+            command = cpp_program_command(pp, found);
+            yasm_xfree(found);
+            return command;
+        }
+#endif
+        return cpp_program_command(pp, prog);
+    }
+    prog = cpp_command_program(cpp_prog, &len);
+#ifdef _WIN32
+    found = cpp_find_program(prog, len);
+    if (!found) {
+        found = cpp_search_path();
+        if (!found)
+            yasm__fatal(N_("no C preprocessor: `%s' is not there and PATH has no cl, clang-cl, icx-cl, icx, icl, "
+                           "clang, gcc or cpp; name one with --cpp"), CPP_PROG);
+        command = cpp_program_command(pp, found);
+        yasm_xfree(found);
+        return command;
+    }
+#endif
+    if (cpp_is_ms_program(prog, len))
+        pp->flags |= CPP_HAS_MS_CPP;
+#ifdef _WIN32
+    {
+        /* CPP_PROG's program by the path found, then its arguments: cmd would look in the current directory first. */
+        const char *args = prog + len + (prog != cpp_prog ? 1 : 0);
+        char *quoted = cpp_quote(found);
+
+        command = yasm_xmalloc(strlen(quoted) + strlen(args) + 1);
+        sprintf(command, "%s%s", quoted, args);
+        yasm_xfree(quoted);
+        yasm_xfree(found);
+        return command;
+    }
+#else
+    return yasm__xstrdup(CPP_PROG);
+#endif
 }
 
 /* Reads a whole line of any length into *buf, growing it; returns 0 at the end of the file. */
@@ -365,6 +643,37 @@ cpp_ms_flatten(yasm_preproc_cpp *pp, FILE *in, const char *path, FILE *out, int 
     yasm_xfree(buf);
 }
 
+/* Flattens the -P files, as cl has no -include, then the input ("-" is standard input) into out, or only lists. */
+static void
+cpp_ms_flatten_input(yasm_preproc_cpp *pp, FILE *out)
+{
+    cpp_arg_entry *arg;
+    char *path;
+    FILE *in;
+
+    for (arg = TAILQ_FIRST(&pp->cpp_args); arg; arg = TAILQ_NEXT(arg, entry)) {
+        if (strcmp(arg->op, "-include") != 0)
+            continue;
+        in = cpp_ms_open_include(pp, "", arg->param, 0, &path);
+        if (!in)
+            yasm__fatal(N_("could not open file `%s'"), arg->param);
+        if (!cpp_path_listed(pp->ms_deps, path))
+            cpp_list_path(&pp->ms_deps, path);
+        cpp_ms_flatten(pp, in, path, out, 0);
+        fclose(in);
+        yasm_xfree(path);
+    }
+    if (strcmp(pp->filename, "-") == 0) {
+        cpp_ms_flatten(pp, stdin, pp->filename, out, 0);
+        return;
+    }
+    in = fopen(pp->filename, "r");
+    if (!in)
+        yasm__fatal(N_("could not open file `%s'"), pp->filename);
+    cpp_ms_flatten(pp, in, pp->filename, out, 0);
+    fclose(in);
+}
+
 /*
     Writes the input, flattened, to a new file in the temporary directory and returns its path. The name holds the
     process id and the file is created only if it does not exist yet, so parallel builds never share one.
@@ -372,10 +681,9 @@ cpp_ms_flatten(yasm_preproc_cpp *pp, FILE *in, const char *path, FILE *out, int 
 static char *
 cpp_ms_prepare_input(yasm_preproc_cpp *pp)
 {
-    const char *ext = strrchr(pp->filename, '.');
     const char *dir = getenv("TMP");
     char *path;
-    FILE *in, *out = NULL;
+    FILE *out = NULL;
 #ifdef _WIN32
     unsigned int n;
 #endif
@@ -384,23 +692,18 @@ cpp_ms_prepare_input(yasm_preproc_cpp *pp)
         dir = getenv("TEMP");
     if (!dir || !*dir)
         dir = ".";
-    if (!ext || strchr(ext, '/') || strchr(ext, '\\'))
-        ext = "";
-    path = yasm_xmalloc(strlen(dir) + strlen(ext) + 48);
+    path = yasm_xmalloc(strlen(dir) + 48);
 #ifdef _WIN32
+    /* .S: clang-cl and icx ignore an .asm or .s input, and preprocess .S as assembler. */
     for (n = 0; n < 1000 && !out; n++) {
-        sprintf(path, "%s\\yasm-%d-%u%s", dir, _getpid(), n, ext);
+        sprintf(path, "%s\\yasm-%d-%u.S", dir, _getpid(), n);
         out = fopen(path, "wx");
     }
 #endif
     if (!out)
         yasm__fatal(N_("could not create a temporary file for the preprocessor"));
 
-    in = fopen(pp->filename, "r");
-    if (!in)
-        yasm__fatal(N_("could not open file `%s'"), pp->filename);
-    cpp_ms_flatten(pp, in, pp->filename, out, 0);
-    fclose(in);
+    cpp_ms_flatten_input(pp, out);
     if (fclose(out) != 0)
         yasm__fatal(N_("could not write file `%s'"), path);
     return path;
@@ -415,25 +718,43 @@ cpp_build_cmdline(yasm_preproc_cpp *pp, const char *extra, const char *input)
 {
     char *cmdline, *p, *limit;
     cpp_arg_entry *arg;
-    size_t cpp_len = strlen(CPP_PROG);
+    size_t cpp_len = strlen(pp->command);
 
     /* Initialize command line. */
     cmdline = p = yasm_xmalloc(cpp_len +CMDLINE_SIZE);
     limit = p + CMDLINE_SIZE;
+#ifdef _WIN32
     /* popen runs cmd /c, which drops the first and the last quote of a line that starts with one */
-    if (pp->flags & CPP_HAS_MS_CPP)
-        *p++ = '"';
-    strcpy(p, CPP_PROG);
+    *p++ = '"';
+#endif
+    strcpy(p, pp->command);
     p += cpp_len;
+
+    if ((pp->flags & CPP_GETS_TARGET) && pp->objfmt) {
+        if (!strcmp(pp->objfmt, "win32") || !strcmp(pp->objfmt, "coff") || !strcmp(pp->objfmt, "elf32") ||
+            !strcmp(pp->objfmt, "macho32"))
+            APPEND(" -m32");
+        else if (!strcmp(pp->objfmt, "win64") || !strcmp(pp->objfmt, "x64") || !strcmp(pp->objfmt, "elf64") ||
+                 !strcmp(pp->objfmt, "macho64"))
+            APPEND(" -m64");
+        else if (!strcmp(pp->objfmt, "elfx32"))
+            APPEND(" -mx32");
+    }
 
     arg = TAILQ_FIRST(&pp->cpp_args);
 
-    /* Append arguments from the list. */
+    /* Append arguments from the list; the paths quoted, the macros as they were given. -P files are already in the
+       input of an MS preprocessor. */
     while ( arg ) {
-        APPEND(" ");
-        APPEND(arg->op);
-        APPEND(" ");
-        APPEND(arg->param);
+        if (!(pp->flags & CPP_HAS_MS_CPP) || strcmp(arg->op, "-include") != 0) {
+            APPEND(" ");
+            APPEND(arg->op);
+            APPEND(" ");
+            if (strcmp(arg->op, "-D") == 0 || strcmp(arg->op, "-U") == 0)
+                APPEND(arg->param);
+            else
+                APPEND_QUOTED(arg->param);
+        }
 
         arg = TAILQ_NEXT(arg, entry);
     }
@@ -444,14 +765,14 @@ cpp_build_cmdline(yasm_preproc_cpp *pp, const char *extra, const char *input)
         APPEND(extra);
     }
     /* Append final arguments. */
-    if (pp->flags & CPP_HAS_MS_CPP) {
-        APPEND(" /nologo /E \"");
-        APPEND(input);
-        APPEND("\"\"");
-    } else {
+    if (pp->flags & CPP_HAS_MS_CPP)
+        APPEND(" /nologo /E ");
+    else
         APPEND(" -x assembler-with-cpp ");
-        APPEND(input);
-    }
+    APPEND_QUOTED(input);
+#ifdef _WIN32
+    APPEND("\"");
+#endif
 
     return cmdline;
 }
@@ -511,6 +832,79 @@ cpp_generate_deps(yasm_preproc_cpp *pp)
     yasm_xfree(cmdline);
 }
 
+static int
+cpp_is_blank(char c)
+{
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+
+/*
+    The next file of the -M output into buf, or with buf NULL only skipped; returns its length, 0 at the end. Files
+    are separated by blanks and backslash line ends; "\ " is a space in a name, "$$" a $.
+*/
+static size_t
+cpp_next_dep(yasm_preproc_cpp *pp, char *buf, size_t max_size)
+{
+    const char *p = pp->deps_next;
+    size_t n = 0;
+
+    for (;;) {
+        if (cpp_is_blank(*p))
+            p++;
+        else if (p[0] == '\\' && (p[1] == '\n' || (p[1] == '\r' && p[2] == '\n')))
+            p += p[1] == '\n' ? 2 : 3;
+        else
+            break;
+    }
+    while (*p && !cpp_is_blank(*p)) {
+        char c = *p++;
+
+        if (c == '\\' && (*p == ' ' || *p == '#'))
+            c = *p++;
+        else if (c == '$' && *p == '$')
+            p++;
+        if (buf && n + 1 < max_size)
+            buf[n] = c;
+        n++;
+    }
+    pp->deps_next = p;
+    if (buf && max_size > 0)
+        buf[n < max_size ? n : max_size - 1] = '\0';
+    return n;
+}
+
+/* Reads the whole -M output, then skips its target and the source file, which come first. */
+static void
+cpp_read_deps(yasm_preproc_cpp *pp)
+{
+    size_t size = BSIZE, len = 0, got;
+    char *text = yasm_xmalloc(size), *p;
+    int failed = 0;
+
+    cpp_generate_deps(pp);
+    while ((got = fread(text + len, 1, size - len - 1, pp->f_deps)) > 0) {
+        len += got;
+        if (len + 1 == size) {
+            size *= 2;
+            text = yasm_xrealloc(text, size);
+        }
+    }
+    text[len] = '\0';
+#ifdef HAVE_POPEN
+    failed = pclose(pp->f_deps) != 0;
+#endif
+    pp->f_deps = NULL;
+    pp->deps_text = text;
+    if (failed)
+        yasm__fatal( N_("Preprocessor exited with failure") );
+
+    /* The target ends at the first colon followed by a blank; the one in C:\ is not. */
+    for (p = text; *p && !(*p == ':' && (p[1] == '\0' || cpp_is_blank(p[1]))); p++)
+        ;
+    pp->deps_next = *p ? p + 1 : p;
+    cpp_next_dep(pp, NULL, 0);
+}
+
 /* cl has no -M: the included files are the ones cpp_ms_flatten inlines, listed when it made cl's input. */
 static size_t
 cpp_ms_get_included_file(yasm_preproc_cpp *pp, char *buf, size_t max_size)
@@ -520,14 +914,8 @@ cpp_ms_get_included_file(yasm_preproc_cpp *pp, char *buf, size_t max_size)
 
     if (!(pp->flags & CPP_HAS_GENERATED_DEPS)) {
         pp->flags |= CPP_HAS_GENERATED_DEPS;
-        if (!(pp->flags & CPP_HAS_BEEN_INVOKED)) {
-            FILE *in = fopen(pp->filename, "r");
-
-            if (!in)
-                yasm__fatal(N_("could not open file `%s'"), pp->filename);
-            cpp_ms_flatten(pp, in, pp->filename, NULL, 0);
-            fclose(in);
-        }
+        if (!(pp->flags & CPP_HAS_BEEN_INVOKED))
+            cpp_ms_flatten_input(pp, NULL);
         pp->ms_dep_next = pp->ms_deps;
     }
 
@@ -558,11 +946,15 @@ cpp_preproc_create(const char *in, yasm_symtab *symtab, yasm_linemap *lm,
     pp->f = pp->f_deps = NULL;
     pp->cur_lm = lm;
     pp->errwarns = errwarns;
-    pp->flags = cpp_is_ms_cl() ? CPP_HAS_MS_CPP : 0;
+    pp->flags = 0;
+    pp->command = cpp_choose_command(pp);
     pp->filename = yasm__xstrdup(in);
     pp->ms_input = NULL;
     pp->ms_once = NULL;
     pp->ms_deps = pp->ms_dep_next = NULL;
+    pp->deps_text = NULL;
+    pp->deps_next = NULL;
+    pp->objfmt = NULL;
 
     TAILQ_INIT(&pp->cpp_args);
 
@@ -603,6 +995,11 @@ cpp_preproc_destroy(yasm_preproc *preproc)
 
     cpp_free_paths(&pp->ms_once);
     cpp_free_paths(&pp->ms_deps);
+    if (pp->deps_text)
+        yasm_xfree(pp->deps_text);
+    if (pp->objfmt)
+        yasm_xfree(pp->objfmt);
+    yasm_xfree(pp->command);
     yasm_xfree(pp->filename);
     yasm_xfree(pp);
 }
@@ -674,9 +1071,6 @@ static size_t
 cpp_preproc_get_included_file(yasm_preproc *preproc, char *buf,
                               size_t max_size)
 {
-    char *p = buf;
-    int ch = '\0';
-    size_t n = 0;
     yasm_preproc_cpp *pp = (yasm_preproc_cpp *)preproc;
 
     if (pp->flags & CPP_HAS_MS_CPP)
@@ -684,41 +1078,9 @@ cpp_preproc_get_included_file(yasm_preproc *preproc, char *buf,
 
     if (! (pp->flags & CPP_HAS_GENERATED_DEPS) ) {
         pp->flags |= CPP_HAS_GENERATED_DEPS;
-
-        cpp_generate_deps(pp);
-
-        /* Skip target name and first dependency. */
-        while (ch != ':')
-            ch = fgetc(pp->f_deps);
-
-        fgetc(pp->f_deps);      /* Discard space after colon. */
-
-        while (ch != ' ' && ch != EOF)
-            ch = fgetc(pp->f_deps);
-
-        if (ch == EOF)
-            return 0;
+        cpp_read_deps(pp);
     }
-
-    while (n < max_size) {
-        ch = fgetc(pp->f_deps);
-
-        if (ch == ' ' || ch == EOF) {
-            *p = '\0';
-            return n;
-        }
-
-        /* Eat any silly characters. */
-        if (ch < ' ')
-            continue;
-
-        *p++ = ch;
-        n++;
-    }
-
-    /* Ensure the buffer is null-terminated. */
-    *(p - 1) = '\0';
-    return n;
+    return cpp_next_dep(pp, buf, max_size);
 }
 
 static void
@@ -760,6 +1122,13 @@ cpp_preproc_undefine_macro(yasm_preproc *preproc, const char *macroname)
 static void
 cpp_preproc_define_builtin(yasm_preproc *preproc, const char *macronameval)
 {
+    yasm_preproc_cpp *pp = (yasm_preproc_cpp *)preproc;
+
+    if (strncmp(macronameval, "__YASM_OBJFMT__=", 16) == 0) {
+        if (pp->objfmt)
+            yasm_xfree(pp->objfmt);
+        pp->objfmt = yasm__xstrdup(macronameval + 16);
+    }
     /* Handle a builtin as if it were a predefine. */
     cpp_preproc_predefine_macro(preproc, macronameval);
 }
