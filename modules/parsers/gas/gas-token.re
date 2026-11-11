@@ -346,6 +346,13 @@ scan:
                 default:
                     break;
             }
+            /* ".type sym, %function" is GAS's spelling of "@function" for targets where @ starts a comment */
+            if (strcmp(TOK+1, "function") == 0 || strcmp(TOK+1, "object") == 0 ||
+                strcmp(TOK+1, "notype") == 0 || strcmp(TOK+1, "common") == 0) {
+                s->tok[TOKLEN] = savech;
+                cursor = s->tok + 1;
+                RETURN('@');
+            }
             yasm_error_set(YASM_ERROR_GENERAL,
                            N_("Unrecognized register name `%s'"), s->tok);
             s->tok[TOKLEN] = savech;
