@@ -94,6 +94,7 @@ static int opt_special_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_arch_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_parser_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_preproc_handler(char *cmd, /*@null@*/ char *param, int extra);
+static int opt_cpp_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_objfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_dbgfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
 static int opt_listfmt_handler(char *cmd, /*@null@*/ char *param, int extra);
@@ -170,6 +171,8 @@ static opt_option options[] =
       N_("select parser (list with -p help)"), N_("parser") },
     { 'r', "preproc", 1, opt_preproc_handler, 0,
       N_("select preprocessor (list with -r help)"), N_("preproc") },
+    { 0, "cpp", 1, opt_cpp_handler, 0,
+      N_("C preprocessor command that -r cpp runs"), N_("command") },
     { 'f', "oformat", 1, opt_objfmt_handler, 0,
       N_("select object format (list with -f help)"), N_("format") },
     { 'g', "dformat", 1, opt_dbgfmt_handler, 0,
@@ -705,6 +708,7 @@ do_assemble(void)
     yasm_errwarns_destroy(errwarns);
     cleanup(object);
     yasm_delete_include_paths();
+    yasm_set_cpp_command(NULL);
     return EXIT_SUCCESS;
 }
 
@@ -1048,6 +1052,14 @@ opt_preproc_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
                     _("preprocessor"), param);
         exit(EXIT_FAILURE);
     }
+    return 0;
+}
+
+static int
+opt_cpp_handler(/*@unused@*/ char *cmd, char *param, /*@unused@*/ int extra)
+{
+    assert(param != NULL);
+    yasm_set_cpp_command(param);
     return 0;
 }
 

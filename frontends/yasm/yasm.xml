@@ -278,6 +278,43 @@
     </varlistentry>
 
     <varlistentry>
+     <term><option>--cpp=<replaceable>command</replaceable></option>:
+      Select the C preprocessor</term>
+
+     <listitem>
+      <para>The command that the <quote>cpp</quote> preprocessor
+       (<option>-r cpp</option>) runs instead of the one Yasm was built
+       with: a program with the options it needs to preprocess, such as
+       <option>--cpp="gcc -E"</option> or <option>--cpp=cl</option>.
+       Yasm adds the include paths, the macro definitions and the input
+       file.  On Windows, a program named <quote>cl</quote>,
+       <quote>clang-cl</quote>, <quote>icx-cl</quote>,
+       <quote>icx</quote> or <quote>icl</quote> is run with cl's
+       options, and a program given without a folder is looked up in the
+       <envar>PATH</envar> folders; elsewhere <quote>clang-cl</quote> is
+       run with cl's options.</para>
+
+      <para>The command is split into words at blanks; a part in double
+       quotes, or outside Windows also in single quotes, keeps its blanks,
+       as a program path with spaces needs.  No shell runs the command:
+       the program gets each option and file name exactly as it is.  This
+       option runs whatever program it names, so a tool that passes
+       options it does not trust to Yasm must not pass this one.</para>
+
+      <para>Without this option, on Windows, if the C preprocessor Yasm
+       was built with cannot be found and the object format is
+       <quote>win32</quote> or <quote>win64</quote>, Yasm runs the first
+       of the Visual Studio compilers <quote>cl</quote>,
+       <quote>clang-cl</quote>, <quote>icx-cl</quote>,
+       <quote>icx</quote> and <quote>icl</quote> that is on
+       <envar>PATH</envar>, and gives it the options it needs, including
+       <option>-m32</option> or <option>-m64</option> as the object
+       format requires (cl and icl come as one program per
+       target).</para>
+     </listitem>
+    </varlistentry>
+
+    <varlistentry>
      <term><option>-h</option> or <option>--help</option>: Print a
       summary of options</term>
 
