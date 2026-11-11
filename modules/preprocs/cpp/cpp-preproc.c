@@ -376,7 +376,9 @@ cpp_ms_prepare_input(yasm_preproc_cpp *pp)
     const char *dir = getenv("TMP");
     char *path;
     FILE *in, *out = NULL;
+#ifdef _WIN32
     unsigned int n;
+#endif
 
     if (!dir || !*dir)
         dir = getenv("TEMP");
@@ -663,11 +665,7 @@ cpp_preproc_get_line(yasm_preproc *preproc)
         while (*p == ' ' || *p == '\t')
             ++p;
         if (0 == strncmp(p, "#line ", 6) && (p[6] >= '0' && p[6] <= '9')) /* erase "line" */
-        {
-            p += 1;
-            size_t len = strlen(p);
-            memmove(p, p + 4, len - 4 + 1); /* + 1 for trailing \0 */
-        }
+            memmove(p + 1, p + 5, strlen(p + 5) + 1); /* + 1 for trailing \0 */
     }
     return buf;
 }
